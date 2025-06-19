@@ -1,0 +1,273 @@
+import React, { useCallback, useState } from 'react';
+import { useDropzone } from 'react-dropzone';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Upload, FileText, X, CheckCircle, AlertCircle } from 'lucide-react';
+import { documentsApi } from '@/lib/api/documents';
+import { profilesApi } from '@/lib/api/profiles';
+import { DOCUMENT_TYPES, FILE_UPLOAD } from '@/lib/config/constants';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from '@/components/ui/sonner';
+
+interface UploadFile {
+  file: File;
+  id: string;
+  progress: number;
+  status: 'pending' | 'uploading' | 'completed' | 'error';
+  error?: string;
+  documentType?: string;
+}
+
+interface DocumentUploadProps {
+  onUploadComplete?: (documentId: string) => void;
+  maxFiles?: number;
+}
+
+export const DocumentUpload: React.FC<DocumentUploadProps> = ({
+  onUploadComplete,
+  maxFiles = 5
+}) => {
+  const [uploadFiles, setUploadFiles] = useState<UploadFile[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const { profile } = useAuth();
+
+  const onDrop = useCallback(async (acceptedFiles: File[]) => {
+    // Check usage limits
+    try {
+      const canUpload = await profilesApi.checkUsageLimit('document_upload');
+      if (!canUpload) {
+        toast.error('Upload limit reached for your subscription tier');
+        return;
+      }
+    } catch (error) {
+      console.error('Error checking usage limits:', error);
+    }
+
+    // Check file size limits based on subscription tier
+    const maxSize = profile?.subscription_tier 
+      ? FILE_UPLOAD.maxSize[profile.subscription_tier]
+      : FILE_UPLOAD.maxSize.free;
+
+    const validFiles = acceptedFiles.filter(file => {
+      if (file.size > maxSize) {
+        toast.error(`File ${file.name} is too large. Maximum size is ${Math.round(maxSize / 1024 / 1024)}MB`);
+        return false;
+      }
+      return true;
+    });
+
+    const newFiles: UploadFile[] = validFiles.map(file => ({
+      file,
+      id: Math.random().toString(36).substr(2, 9),
+      progress: 0,
+      status: 'pending'
+    }));
+
+    setUploadFiles(prev => [...prev, ...newFiles].slice(0, maxFiles));
+  }, [profile, maxFiles]);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: {
+      'application/pdf': ['.pdf'],
+      'application/msword': ['.doc'],
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+      'text/plain': ['.txt']
+    },
+    maxFiles,
+    disabled: isUploading
+  });
+
+  const removeFile = (id: string) => {
+    setUploadFiles(prev => prev.filter(f => f.id !== id));
+  };
+
+  const updateFileType = (id: string, documentType: string) => {
+    setUploadFiles(prev => prev.map(f => 
+      f.id === id ? { ...f, documentType } : f
+    ));
+  };
+
+  const uploadFiles = async () => {
+    if (uploadFiles.length === 0) return;
+
+    setIsUploading(true);
+
+    for (const uploadFile of uploadFiles) {
+      if (uploadFile.status !== 'pending' || !uploadFile.documentType) continue;
+
+      try {
+        // Update status to uploading
+        setUploadFiles(prev => prev.map(f => 
+          f.id === uploadFile.id ? { ...f, status: 'uploading', progress: 0 } : f
+        ));
+
+        // Simulate progress updates (in real implementation, this would come from the upload API)
+        const progressInterval = setInterval(() => {
+          setUploadFiles(prev => prev.map(f => {
+            if (f.id === uploadFile.id && f.progress < 90) {
+              return { ...f, progress: f.progress + 10 };
+            }
+            return f;
+          }));
+        }, 200);
+
+        // Upload the document
+        const document = await documentsApi.uploadDocument(uploadFile.file, uploadFile.documentType);
+        
+        // Increment usage counter
+        await profilesApi.incrementUsage('document_upload');
+
+        clearInterval(progressInterval);
+
+        // Update status to completed
+        setUploadFiles(prev => prev.map(f => 
+          f.id === uploadFile.id ? { ...f, status: 'completed', progress: 100 } : f
+        ));
+
+        toast.success(`${uploadFile.file.name} uploaded successfully`);
+        
+        if (onUploadComplete) {
+          onUploadComplete(document.id);
+        }
+
+      } catch (error: any) {
+        console.error('Upload error:', error);
+        
+        setUploadFiles(prev => prev.map(f => 
+          f.id === uploadFile.id ? { 
+            ...f, 
+            status: 'error', 
+            error: error.message || 'Upload failed' 
+          } : f
+        ));
+
+        toast.error(`Failed to upload ${uploadFile.file.name}`);
+      }
+    }
+
+    setIsUploading(false);
+  };
+
+  const canUpload = uploadFiles.some(f => f.status === 'pending' && f.documentType);
+
+  return (
+    <Card className="w-full">
+      <CardHeader>
+        <CardTitle>Upload Documents</CardTitle>
+        <CardDescription>
+          Upload your legal documents for AI-powered analysis and processing
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Dropzone */}
+        <div
+          {...getRootProps()}
+          className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+            isDragActive 
+              ? 'border-blue-500 bg-blue-50' 
+              : 'border-gray-300 hover:border-gray-400'
+          } ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+        >
+          <input {...getInputProps()} />
+          <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+          {isDragActive ? (
+            <p className="text-blue-600">Drop the files here...</p>
+          ) : (
+            <div>
+              <p className="text-gray-600 mb-2">
+                Drag & drop files here, or click to select files
+              </p>
+              <p className="text-sm text-gray-500">
+                Supports PDF, DOC, DOCX, TXT files up to{' '}
+                {Math.round((profile?.subscription_tier 
+                  ? FILE_UPLOAD.maxSize[profile.subscription_tier]
+                  : FILE_UPLOAD.maxSize.free) / 1024 / 1024)}MB
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* File List */}
+        {uploadFiles.length > 0 && (
+          <div className="space-y-3">
+            {uploadFiles.map((uploadFile) => (
+              <div key={uploadFile.id} className="border rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center space-x-2">
+                    <FileText className="h-4 w-4 text-gray-500" />
+                    <span className="text-sm font-medium">{uploadFile.file.name}</span>
+                    <span className="text-xs text-gray-500">
+                      ({Math.round(uploadFile.file.size / 1024)} KB)
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    {uploadFile.status === 'completed' && (
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                    )}
+                    {uploadFile.status === 'error' && (
+                      <AlertCircle className="h-4 w-4 text-red-500" />
+                    )}
+                    {uploadFile.status === 'pending' && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeFile(uploadFile.id)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                {uploadFile.status === 'pending' && (
+                  <div className="mb-2">
+                    <Select
+                      value={uploadFile.documentType || ''}
+                      onValueChange={(value) => updateFileType(uploadFile.id, value)}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select document type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(DOCUMENT_TYPES).map(([key, label]) => (
+                          <SelectItem key={key} value={key}>
+                            {label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {uploadFile.status === 'uploading' && (
+                  <Progress value={uploadFile.progress} className="w-full" />
+                )}
+
+                {uploadFile.status === 'error' && uploadFile.error && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{uploadFile.error}</AlertDescription>
+                  </Alert>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Upload Button */}
+        {uploadFiles.length > 0 && (
+          <Button
+            onClick={uploadFiles}
+            disabled={!canUpload || isUploading}
+            className="w-full"
+          >
+            {isUploading ? 'Uploading...' : `Upload ${uploadFiles.filter(f => f.status === 'pending').length} Files`}
+          </Button>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
