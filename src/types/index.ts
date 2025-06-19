@@ -1,6 +1,6 @@
 // Core type definitions for LawMattersSGv8
 
-export type SubscriptionTier = 'free' | 'basic' | 'premium' | 'enterprise';
+export type SubscriptionTier = 'free' | 'premium' | 'pro' | 'enterprise';
 
 export type ProcessingStatus = 'pending' | 'processing' | 'completed' | 'failed';
 
@@ -11,6 +11,9 @@ export interface User {
   email: string;
   first_name?: string;
   last_name?: string;
+  full_name?: string;
+  avatar_url?: string;
+  role: UserRole;
   subscription_tier: SubscriptionTier;
   created_at: string;
   updated_at: string;
@@ -113,6 +116,107 @@ export interface AIUsageLog {
   tokens_used: number;
   cost: number;
   created_at: string;
+}
+
+export interface LawFirm {
+  id: string;
+  name: string;
+  description: string;
+  address: string;
+  phone: string;
+  email: string;
+  website?: string;
+  practice_areas: string[];
+  rating: number;
+  verified: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LawFirmReview {
+  id: string;
+  law_firm_id: string;
+  user_id: string;
+  rating: number;
+  title: string;
+  content: string;
+  helpful_count: number;
+  verified_client: boolean;
+  status: 'pending' | 'approved' | 'rejected';
+  created_at: string;
+  updated_at: string;
+  user?: {
+    full_name: string;
+    avatar_url?: string;
+  };
+}
+
+export interface LawFirmReviewVote {
+  id: string;
+  review_id: string;
+  user_id: string;
+  is_helpful: boolean;
+  created_at: string;
+}
+
+export type UserRole = 'user' | 'admin' | 'moderator' | 'super_admin';
+
+export interface Permission {
+  id: string;
+  name: string;
+  description: string;
+  resource: string;
+  action: string;
+  created_at: string;
+}
+
+export interface RolePermission {
+  id: string;
+  role: UserRole;
+  permission_id: string;
+  created_at: string;
+  permission?: Permission;
+}
+
+export interface UserPermission {
+  id: string;
+  user_id: string;
+  permission_id: string;
+  granted: boolean;
+  granted_by: string;
+  created_at: string;
+  permission?: Permission;
+  granted_by_user?: {
+    full_name: string;
+    email: string;
+  };
+}
+
+export interface AuditLog {
+  id: string;
+  user_id: string;
+  action: string;
+  resource_type: string;
+  resource_id?: string;
+  old_values?: Record<string, any>;
+  new_values?: Record<string, any>;
+  ip_address?: string;
+  user_agent?: string;
+  created_at: string;
+  user?: {
+    full_name: string;
+    email: string;
+    role: UserRole;
+  };
+}
+
+export interface UserWithPermissions extends Profile {
+  role: UserRole;
+  permissions?: {
+    permission_name: string;
+    granted_by_role: boolean;
+    granted_individually: boolean;
+  }[];
 }
 
 export interface UserUsage {

@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "lawmatters-mcp": {
+      "command": "node",
+      "args": ["./mcp-server/dist/index.js"],
+      "cwd": "C:/Webapp-Projects-1/lawmatterssgv8-8",
+      "env": {
+        "MCP_LOG_LEVEL": "info",
+        "MCP_AUTO_FIX": "false",
+        "MCP_WATCH_PATHS": "src/**/*.ts,src/**/*.tsx"
+      }
+    }
+  }
+}

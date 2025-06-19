@@ -144,3 +144,102 @@ BEGIN
       CASE WHEN operation_type = 'document_upload' THEN 1 ELSE 0 END;
 END;
 $$;
+
+-- Function to match documents for RAG queries
+CREATE OR REPLACE FUNCTION match_documents(
+  query_embedding vector(1536),
+  match_threshold float DEFAULT 0.7,
+  match_count int DEFAULT 5,
+  document_ids uuid[] DEFAULT NULL
+)
+RETURNS TABLE (
+  id uuid,
+  document_id uuid,
+  content text,
+  similarity float
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    de.id,
+    de.document_id,
+    COALESCE(de.chunk_text, ud.extracted_text) as content,
+    1 - (de.embedding <=> query_embedding) as similarity
+  FROM document_embeddings de
+  JOIN uploaded_documents ud ON de.document_id = ud.id
+  WHERE
+    (document_ids IS NULL OR de.document_id = ANY(document_ids))
+    AND 1 - (de.embedding <=> query_embedding) > match_threshold
+  ORDER BY de.embedding <=> query_embedding
+  LIMIT match_count;
+END;
+$$;
+
+-- Function to search documents by text
+CREATE OR REPLACE FUNCTION search_documents_by_text(
+  search_query text,
+  user_id_param uuid
+)
+RETURNS TABLE (
+  id uuid,
+  filename text,
+  document_type text,
+  extracted_text text,
+  summary text,
+  created_at timestamptz,
+  rank float
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    ud.id,
+    ud.filename,
+    ud.document_type,
+    ud.extracted_text,
+    ud.summary,
+    ud.created_at,
+    ts_rank(
+      to_tsvector('english', COALESCE(ud.extracted_text, '') || ' ' || COALESCE(ud.summary, '') || ' ' || ud.filename),
+      plainto_tsquery('english', search_query)
+    ) as rank
+  FROM uploaded_documents ud
+  WHERE
+    ud.user_id = user_id_param
+    AND (
+      to_tsvector('english', COALESCE(ud.extracted_text, '') || ' ' || COALESCE(ud.summary, '') || ' ' || ud.filename)
+      @@ plainto_tsquery('english', search_query)
+    )
+  ORDER BY rank DESC;
+END;
+$$;
+
+-- Function to get user usage statistics
+CREATE OR REPLACE FUNCTION get_user_usage_stats(
+  user_id_param uuid,
+  period_days int DEFAULT 30
+)
+RETURNS TABLE (
+  operation text,
+  count bigint,
+  last_used timestamptz
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    aul.operation,
+    COUNT(*) as count,
+    MAX(aul.created_at) as last_used
+  FROM ai_usage_logs aul
+  WHERE
+    aul.user_id = user_id_param
+    AND aul.created_at >= NOW() - INTERVAL '1 day' * period_days
+  GROUP BY aul.operation
+  ORDER BY count DESC;
+END;
+$$;

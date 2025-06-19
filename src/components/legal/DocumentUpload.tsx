@@ -5,9 +5,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Upload, FileText, X, CheckCircle, AlertCircle } from 'lucide-react';
+import { Upload, FileText, X, CheckCircle, AlertCircle, Brain, Eye, Zap } from 'lucide-react';
 import { documentsApi } from '@/lib/api/documents';
 import { profilesApi } from '@/lib/api/profiles';
+import { processDocument, type ProcessingStatus } from '@/lib/services/documentProcessor';
 import { DOCUMENT_TYPES, FILE_UPLOAD } from '@/lib/config/constants';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/components/ui/sonner';
@@ -16,9 +17,12 @@ interface UploadFile {
   file: File;
   id: string;
   progress: number;
-  status: 'pending' | 'uploading' | 'completed' | 'error';
+  status: 'pending' | 'uploading' | 'processing' | 'completed' | 'error';
   error?: string;
   documentType?: string;
+  documentId?: string;
+  processingStage?: ProcessingStatus['stage'];
+  processingMessage?: string;
 }
 
 interface DocumentUploadProps {
@@ -91,7 +95,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
     ));
   };
 
-  const uploadFiles = async () => {
+  const handleUploadFiles = async () => {
     if (uploadFiles.length === 0) return;
 
     setIsUploading(true);
@@ -100,52 +104,76 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
       if (uploadFile.status !== 'pending' || !uploadFile.documentType) continue;
 
       try {
-        // Update status to uploading
-        setUploadFiles(prev => prev.map(f => 
-          f.id === uploadFile.id ? { ...f, status: 'uploading', progress: 0 } : f
+        // Stage 1: Upload the file
+        setUploadFiles(prev => prev.map(f =>
+          f.id === uploadFile.id ? {
+            ...f,
+            status: 'uploading',
+            progress: 0,
+            processingMessage: 'Uploading file...'
+          } : f
         ));
 
-        // Simulate progress updates (in real implementation, this would come from the upload API)
-        const progressInterval = setInterval(() => {
-          setUploadFiles(prev => prev.map(f => {
-            if (f.id === uploadFile.id && f.progress < 90) {
-              return { ...f, progress: f.progress + 10 };
-            }
-            return f;
-          }));
-        }, 200);
-
-        // Upload the document
         const document = await documentsApi.uploadDocument(uploadFile.file, uploadFile.documentType);
-        
+
         // Increment usage counter
         await profilesApi.incrementUsage('document_upload');
 
-        clearInterval(progressInterval);
-
-        // Update status to completed
-        setUploadFiles(prev => prev.map(f => 
-          f.id === uploadFile.id ? { ...f, status: 'completed', progress: 100 } : f
+        // Stage 2: Start AI processing
+        setUploadFiles(prev => prev.map(f =>
+          f.id === uploadFile.id ? {
+            ...f,
+            status: 'processing',
+            progress: 20,
+            documentId: document.id,
+            processingMessage: 'Starting AI processing...'
+          } : f
         ));
 
-        toast.success(`${uploadFile.file.name} uploaded successfully`);
-        
+        // Process the document with AI
+        await processDocument(uploadFile.file, document.id, (processingStatus) => {
+          setUploadFiles(prev => prev.map(f => {
+            if (f.id === uploadFile.id) {
+              return {
+                ...f,
+                progress: 20 + (processingStatus.progress * 0.8), // Upload was 20%, processing is 80%
+                processingStage: processingStatus.stage,
+                processingMessage: processingStatus.message
+              };
+            }
+            return f;
+          }));
+        });
+
+        // Mark as completed
+        setUploadFiles(prev => prev.map(f =>
+          f.id === uploadFile.id ? {
+            ...f,
+            status: 'completed',
+            progress: 100,
+            processingMessage: 'Processing completed!'
+          } : f
+        ));
+
+        toast.success(`${uploadFile.file.name} uploaded and processed successfully`);
+
         if (onUploadComplete) {
           onUploadComplete(document.id);
         }
 
       } catch (error: any) {
-        console.error('Upload error:', error);
-        
-        setUploadFiles(prev => prev.map(f => 
-          f.id === uploadFile.id ? { 
-            ...f, 
-            status: 'error', 
-            error: error.message || 'Upload failed' 
+        console.error('Upload/processing error:', error);
+
+        setUploadFiles(prev => prev.map(f =>
+          f.id === uploadFile.id ? {
+            ...f,
+            status: 'error',
+            error: error.message ?? 'Upload or processing failed',
+            processingMessage: 'Failed'
           } : f
         ));
 
-        toast.error(`Failed to upload ${uploadFile.file.name}`);
+        toast.error(`Failed to process ${uploadFile.file.name}: ${error.message}`);
       }
     }
 
@@ -243,8 +271,22 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
                   </div>
                 )}
 
-                {uploadFile.status === 'uploading' && (
-                  <Progress value={uploadFile.progress} className="w-full" />
+                {(uploadFile.status === 'uploading' || uploadFile.status === 'processing') && (
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>{uploadFile.processingMessage || 'Processing...'}</span>
+                      <span>{Math.round(uploadFile.progress)}%</span>
+                    </div>
+                    <Progress value={uploadFile.progress} className="w-full" />
+                    {uploadFile.processingStage && (
+                      <div className="flex items-center space-x-2 text-xs text-gray-500">
+                        {uploadFile.processingStage === 'ocr' && <Eye className="h-3 w-3" />}
+                        {uploadFile.processingStage === 'analysis' && <Brain className="h-3 w-3" />}
+                        {uploadFile.processingStage === 'embedding' && <Zap className="h-3 w-3" />}
+                        <span className="capitalize">{uploadFile.processingStage} processing</span>
+                      </div>
+                    )}
+                  </div>
                 )}
 
                 {uploadFile.status === 'error' && uploadFile.error && (
@@ -260,7 +302,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
         {/* Upload Button */}
         {uploadFiles.length > 0 && (
           <Button
-            onClick={uploadFiles}
+            onClick={handleUploadFiles}
             disabled={!canUpload || isUploading}
             className="w-full"
           >

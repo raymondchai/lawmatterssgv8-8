@@ -1,9 +1,11 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { AuthenticatedRoute } from '@/components/auth/ProtectedRoute';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, MessageSquare, Template, User } from 'lucide-react';
+import { FileText, MessageSquare, Files, User } from 'lucide-react';
+import { ROUTES } from '@/lib/config/constants';
 
 const Dashboard: React.FC = () => {
   const { user, profile, signOut } = useAuth();
@@ -70,7 +72,7 @@ const Dashboard: React.FC = () => {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Templates</CardTitle>
-                  <Template className="h-4 w-4 text-muted-foreground" />
+                  <Files className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">0</div>
@@ -106,10 +108,12 @@ const Dashboard: React.FC = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Button className="w-full">
-                    <FileText className="mr-2 h-4 w-4" />
-                    Upload Document
-                  </Button>
+                  <Link to={ROUTES.documents}>
+                    <Button className="w-full">
+                      <FileText className="mr-2 h-4 w-4" />
+                      Upload Document
+                    </Button>
+                  </Link>
                 </CardContent>
               </Card>
 
@@ -137,7 +141,7 @@ const Dashboard: React.FC = () => {
                 </CardHeader>
                 <CardContent>
                   <Button className="w-full">
-                    <Template className="mr-2 h-4 w-4" />
+                    <Files className="mr-2 h-4 w-4" />
                     View Templates
                   </Button>
                 </CardContent>
