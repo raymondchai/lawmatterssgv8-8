@@ -10,9 +10,6 @@ import {
   Download,
   Share2,
   Eye,
-  ZoomIn,
-  ZoomOut,
-  RotateCw,
   Maximize2,
   X,
   Loader2,
@@ -21,6 +18,7 @@ import {
 } from 'lucide-react';
 import { documentsApi } from '@/lib/api/documents';
 import { DocumentAnalysisComponent } from './DocumentAnalysis';
+import { EnhancedPDFViewer } from './EnhancedPDFViewer';
 import { DOCUMENT_TYPES, PROCESSING_STATUS } from '@/lib/config/constants';
 import type { UploadedDocument } from '@/types';
 import { toast } from '@/components/ui/sonner';
@@ -40,8 +38,6 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
   const [document, setDocument] = useState<UploadedDocument | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [zoom, setZoom] = useState(100);
-  const [rotation, setRotation] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [activeTab, setActiveTab] = useState('viewer');
 
@@ -247,39 +243,33 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
           </div>
 
           <TabsContent value="viewer" className="mt-0">
-            <ScrollArea className={isFullscreen ? 'h-[calc(100vh-250px)]' : 'h-[550px]'}>
-              <div className="p-4">
-                {document.file_url.toLowerCase().endsWith('.pdf') ? (
-                  <div
-                    className="w-full border rounded-lg overflow-hidden"
-                    style={{
-                      transform: `scale(${zoom / 100}) rotate(${rotation}deg)`,
-                      transformOrigin: 'top left'
-                    }}
-                  >
-                    <iframe
-                      src={`${document.file_url}#toolbar=0&navpanes=0&scrollbar=0`}
-                      className="w-full h-[800px]"
-                      title={document.filename}
-                    />
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <FileText className="mx-auto h-16 w-16 text-gray-400 mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">
-                      Preview not available
-                    </h3>
-                    <p className="text-gray-500 mb-4">
-                      This file type cannot be previewed in the browser.
-                    </p>
-                    <Button onClick={handleDownload}>
-                      <Download className="mr-2 h-4 w-4" />
-                      Download to view
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </ScrollArea>
+            <div className="p-4">
+              {document.file_url.toLowerCase().endsWith('.pdf') ? (
+                <EnhancedPDFViewer
+                  documentUrl={document.file_url}
+                  documentId={document.id}
+                  className="w-full"
+                  onAnnotationChange={(annotations) => {
+                    // Handle annotation changes - could save to database
+                    console.log('Annotations updated:', annotations);
+                  }}
+                />
+              ) : (
+                <div className="text-center py-8">
+                  <FileText className="mx-auto h-16 w-16 text-gray-400 mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    Preview not available
+                  </h3>
+                  <p className="text-gray-500 mb-4">
+                    This file type cannot be previewed in the browser.
+                  </p>
+                  <Button onClick={handleDownload}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Download to view
+                  </Button>
+                </div>
+              )}
+            </div>
           </TabsContent>
 
           <TabsContent value="text" className="mt-0">

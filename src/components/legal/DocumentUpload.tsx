@@ -10,6 +10,9 @@ import { documentsApi } from '@/lib/api/documents';
 import { processDocument, type ProcessingStatus } from '@/lib/services/documentProcessor';
 import { DOCUMENT_TYPES, FILE_UPLOAD } from '@/lib/config/constants';
 import { useAuth } from '@/contexts/AuthContext';
+import { useRealTime, useRealTimeSimulation } from '@/hooks/useRealTimeUpdates';
+import { DocumentProcessingIndicator } from '@/components/ui/RealTimeStatusIndicator';
+import { realtimeService } from '@/lib/services/websocket';
 import { toast } from '@/components/ui/sonner';
 
 interface UploadFile {
