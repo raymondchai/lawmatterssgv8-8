@@ -1,0 +1,45 @@
+QUICK STRIPE SETUP INSTRUCTIONS
+================================
+
+1. CREATE STRIPE PRODUCTS
+   - Go to stripe.com → Dashboard → Products
+   - Create 3 products:
+     * Legal Consultation ($150)
+     * Document Review ($250) 
+     * Contract Drafting ($500)
+   - Copy each Price ID (starts with "price_")
+
+2. UPDATE CODE
+   - Edit: src/lib/stripe-service.ts
+   - Replace the price IDs with your actual Stripe Price IDs
+
+3. ENVIRONMENT VARIABLES
+   - Your .env.local should have:
+     VITE_SUPABASE_URL=your_supabase_url
+     VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+     VITE_STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_key
+
+4. SUPABASE SETUP
+   - Install CLI: npm install -g supabase
+   - Login: supabase login
+   - Link project: supabase link --project-ref YOUR_PROJECT_REF
+   - Deploy function: supabase functions deploy create-checkout-session
+
+5. SUPABASE ENVIRONMENT VARIABLES
+   - In Supabase Dashboard → Settings → Edge Functions
+   - Add:
+     STRIPE_SECRET_KEY=sk_test_your_stripe_secret
+     SUPABASE_URL=your_supabase_url
+     SUPABASE_ANON_KEY=your_supabase_anon_key
+
+6. TEST
+   - Run: npm run dev
+   - Go to /dashboard
+   - Try purchasing a service
+   - Use test card: 4242 4242 4242 4242
+
+FILES CREATED:
+- supabase/functions/create-checkout-session/index.ts (Edge Function)
+- src/lib/stripe-service.ts (Frontend service)
+- Updated src/pages/Dashboard.tsx (Payment UI)
+- supabase/config.toml (Supabase config)
