@@ -3,11 +3,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Textarea } from '@/components/ui/textarea';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   ZoomIn,
   ZoomOut,
@@ -16,7 +14,7 @@ import {
   Minimize2,
   Highlighter,
   MessageSquare,
-  Sticky,
+  StickyNote,
   Palette,
   Save,
   Trash2,
@@ -24,22 +22,13 @@ import {
   EyeOff
 } from 'lucide-react';
 import { toast } from '@/components/ui/sonner';
+import { useAnnotations } from '@/hooks/useAnnotations';
+import { useAuth } from '@/contexts/AuthContext';
+import type { DocumentAnnotation } from '@/lib/api/annotations';
+import { formatDistanceToNow } from 'date-fns';
 
-export interface Annotation {
-  id: string;
-  type: 'highlight' | 'note' | 'sticky';
-  pageNumber: number;
-  position: {
-    x: number;
-    y: number;
-    width?: number;
-    height?: number;
-  };
-  content: string;
-  color: string;
-  createdAt: string;
-  updatedAt: string;
-}
+// Use the DocumentAnnotation type from the API
+type Annotation = DocumentAnnotation;
 
 interface EnhancedPDFViewerProps {
   documentUrl: string;
@@ -66,7 +55,6 @@ export const EnhancedPDFViewer: React.FC<EnhancedPDFViewerProps> = ({
   const [zoom, setZoom] = useState(100);
   const [rotation, setRotation] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [selectedTool, setSelectedTool] = useState<'select' | 'highlight' | 'note' | 'sticky'>('select');
   const [selectedColor, setSelectedColor] = useState(HIGHLIGHT_COLORS[0]);
   const [showAnnotations, setShowAnnotations] = useState(true);
@@ -79,26 +67,22 @@ export const EnhancedPDFViewer: React.FC<EnhancedPDFViewerProps> = ({
   const viewerRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  // Load annotations from localStorage or API
-  useEffect(() => {
-    const savedAnnotations = localStorage.getItem(`annotations_${documentId}`);
-    if (savedAnnotations) {
-      try {
-        const parsed = JSON.parse(savedAnnotations);
-        setAnnotations(parsed);
-      } catch (error) {
-        console.error('Error loading annotations:', error);
-      }
-    }
-  }, [documentId]);
+  // Use the annotations hook for database-backed annotations
+  const {
+    annotations,
+    loading: annotationsLoading,
+    createAnnotation,
+    updateAnnotation,
+    deleteAnnotation,
+    createReply
+  } = useAnnotations(documentId);
 
-  // Save annotations when they change
+  const { user } = useAuth();
+
+  // Notify parent component when annotations change
   useEffect(() => {
-    if (annotations.length > 0) {
-      localStorage.setItem(`annotations_${documentId}`, JSON.stringify(annotations));
-      onAnnotationChange?.(annotations);
-    }
-  }, [annotations, documentId, onAnnotationChange]);
+    onAnnotationChange?.(annotations);
+  }, [annotations, onAnnotationChange]);
 
   const handleZoomIn = () => {
     setZoom(prev => Math.min(prev + 25, 300));
@@ -131,7 +115,7 @@ export const EnhancedPDFViewer: React.FC<EnhancedPDFViewerProps> = ({
       setCurrentSelection({ x, y, width: 0, height: 0 });
     } else if (selectedTool === 'note' || selectedTool === 'sticky') {
       // Create annotation at click position
-      createAnnotation(x, y);
+      handleCreateAnnotation(x, y);
     }
   }, [selectedTool]);
 
@@ -163,53 +147,51 @@ export const EnhancedPDFViewer: React.FC<EnhancedPDFViewerProps> = ({
     setCurrentSelection(null);
   }, [isSelecting, currentSelection, selectedTool]);
 
-  const createAnnotation = (x: number, y: number) => {
-    const newAnnotation: Annotation = {
-      id: `annotation_${Date.now()}`,
+  const handleCreateAnnotation = async (x: number, y: number) => {
+    if (!user) {
+      toast.error('Please log in to create annotations');
+      return;
+    }
+
+    const newAnnotation = await createAnnotation({
       type: selectedTool as 'note' | 'sticky',
-      pageNumber: 1, // For now, assume single page
+      page_number: 1, // For now, assume single page
       position: { x, y },
       content: '',
-      color: selectedColor.value,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
+      color: selectedColor.value
+    });
 
-    setAnnotations(prev => [...prev, newAnnotation]);
-    setEditingAnnotation(newAnnotation.id);
-    setNewAnnotationContent('');
+    if (newAnnotation) {
+      setEditingAnnotation(newAnnotation.id);
+      setNewAnnotationContent('');
+    }
   };
 
-  const createHighlight = (selection: { x: number; y: number; width: number; height: number }) => {
-    const newAnnotation: Annotation = {
-      id: `highlight_${Date.now()}`,
+  const handleCreateHighlight = async (selection: { x: number; y: number; width: number; height: number }) => {
+    if (!user) {
+      toast.error('Please log in to create highlights');
+      return;
+    }
+
+    await createAnnotation({
       type: 'highlight',
-      pageNumber: 1,
+      page_number: 1,
       position: selection,
       content: 'Highlighted text',
-      color: selectedColor.value,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-
-    setAnnotations(prev => [...prev, newAnnotation]);
-    toast.success('Highlight added');
+      color: selectedColor.value
+    });
   };
 
-  const updateAnnotation = (id: string, content: string) => {
-    setAnnotations(prev => prev.map(annotation => 
-      annotation.id === id 
-        ? { ...annotation, content, updatedAt: new Date().toISOString() }
-        : annotation
-    ));
-    setEditingAnnotation(null);
-    setNewAnnotationContent('');
-    toast.success('Annotation updated');
+  const handleUpdateAnnotation = async (id: string, content: string) => {
+    const success = await updateAnnotation(id, { content });
+    if (success) {
+      setEditingAnnotation(null);
+      setNewAnnotationContent('');
+    }
   };
 
-  const deleteAnnotation = (id: string) => {
-    setAnnotations(prev => prev.filter(annotation => annotation.id !== id));
-    toast.success('Annotation deleted');
+  const handleDeleteAnnotation = async (id: string) => {
+    await deleteAnnotation(id);
   };
 
   const containerClass = isFullscreen 
@@ -263,7 +245,7 @@ export const EnhancedPDFViewer: React.FC<EnhancedPDFViewerProps> = ({
                 size="sm"
                 onClick={() => setSelectedTool('sticky')}
               >
-                <Sticky className="h-4 w-4" />
+                <StickyNote className="h-4 w-4" />
               </Button>
             </div>
 
@@ -369,7 +351,7 @@ export const EnhancedPDFViewer: React.FC<EnhancedPDFViewerProps> = ({
                             {annotation.type === 'note' ? (
                               <MessageSquare className="h-3 w-3" />
                             ) : (
-                              <Sticky className="h-3 w-3" />
+                              <StickyNote className="h-3 w-3" />
                             )}
                           </Button>
                         </PopoverTrigger>

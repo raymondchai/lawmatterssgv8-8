@@ -39,6 +39,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
   const [uploadFiles, setUploadFiles] = useState<UploadFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const { profile } = useAuth();
+  const { simulateDocumentProcessing } = useRealTimeSimulation();
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     // Check usage limits with new usage tracking service
@@ -146,6 +147,19 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
           } : f
         ));
 
+        // Trigger real-time simulation for development
+        if (import.meta.env.DEV) {
+          simulateDocumentProcessing(document.id);
+        }
+
+        // Send real-time update
+        realtimeService.sendDocumentProcessingUpdate({
+          documentId: document.id,
+          status: 'processing',
+          progress: 20,
+          message: 'Starting AI processing...'
+        });
+
         // Process the document with AI
         await processDocument(uploadFile.file, document.id, (processingStatus) => {
           setUploadFiles(prev => prev.map(f => {
@@ -159,6 +173,15 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
             }
             return f;
           }));
+
+          // Send real-time update for each processing stage
+          realtimeService.sendDocumentProcessingUpdate({
+            documentId: document.id,
+            status: 'processing',
+            progress: 20 + (processingStatus.progress * 0.8),
+            message: processingStatus.message,
+            stage: processingStatus.stage
+          });
         });
 
         // Mark as completed
@@ -170,6 +193,14 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
             processingMessage: 'Processing completed!'
           } : f
         ));
+
+        // Send completion update
+        realtimeService.sendDocumentProcessingUpdate({
+          documentId: document.id,
+          status: 'completed',
+          progress: 100,
+          message: 'Document processing completed successfully!'
+        });
 
         toast.success(`${uploadFile.file.name} uploaded and processed successfully`);
 
@@ -188,6 +219,18 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
             processingMessage: 'Failed'
           } : f
         ));
+
+        // Send error update if document was created
+        const failedFile = uploadFiles.find(f => f.id === uploadFile.id);
+        if (failedFile?.documentId) {
+          realtimeService.sendDocumentProcessingUpdate({
+            documentId: failedFile.documentId,
+            status: 'failed',
+            progress: 0,
+            message: 'Document processing failed',
+            error: error.message ?? 'Upload or processing failed'
+          });
+        }
 
         toast.error(`Failed to process ${uploadFile.file.name}: ${error.message}`);
       }

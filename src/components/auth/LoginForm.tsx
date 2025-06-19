@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { TwoFactorVerification } from './TwoFactorVerification';
 import { ROUTES } from '@/lib/config/constants';
 
 const loginSchema = z.object({
@@ -23,7 +24,9 @@ export const LoginForm: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { signIn } = useAuth();
+  const [showTwoFactor, setShowTwoFactor] = useState(false);
+  const [userEmail, setUserEmail] = useState<string>('');
+  const { signIn, verifyTwoFactor } = useAuth();
   const navigate = useNavigate();
 
   const {
@@ -39,14 +42,40 @@ export const LoginForm: React.FC = () => {
     setError(null);
 
     try {
-      await signIn(data.email, data.password);
-      navigate(ROUTES.dashboard);
+      const result = await signIn(data.email, data.password);
+
+      if (result.requiresTwoFactor) {
+        setUserEmail(data.email);
+        setShowTwoFactor(true);
+      } else {
+        navigate(ROUTES.dashboard);
+      }
     } catch (err: any) {
-      setError(err.message || 'An error occurred during login');
+      setError(err.message ?? 'An error occurred during login');
     } finally {
       setIsLoading(false);
     }
   };
+
+  const handleTwoFactorSuccess = () => {
+    setShowTwoFactor(false);
+    navigate(ROUTES.dashboard);
+  };
+
+  const handleTwoFactorBack = () => {
+    setShowTwoFactor(false);
+    setUserEmail('');
+  };
+
+  if (showTwoFactor) {
+    return (
+      <TwoFactorVerification
+        onVerificationSuccess={handleTwoFactorSuccess}
+        onBack={handleTwoFactorBack}
+        userEmail={userEmail}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { rbacApi } from '@/lib/api/rbac';
 import { useAuth } from '@/contexts/AuthContext';
 import type { UserRole } from '@/types';

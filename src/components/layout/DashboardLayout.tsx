@@ -2,27 +2,28 @@ import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuLabel, 
-  DropdownMenuSeparator, 
-  DropdownMenuTrigger 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
-import { 
-  Home, 
-  FileText, 
-  MessageSquare, 
-  Files, 
-  Building2, 
-  Settings, 
+import {
+  Home,
+  FileText,
+  MessageSquare,
+  Files,
+  Building2,
+  Settings,
   CreditCard,
   LogOut,
   User,
   Shield
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { RealTimeStatusIndicator } from '@/components/ui/RealTimeStatusIndicator';
 import { cn } from '@/lib/utils';
 
 interface DashboardLayoutProps {
@@ -94,6 +95,9 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
 
             {/* User Menu */}
             <div className="flex items-center space-x-4">
+              {/* Real-time Status Indicator */}
+              <RealTimeStatusIndicator showDetails={true} />
+
               {/* Subscription Badge */}
               <div className="hidden sm:block">
                 <Link to="/dashboard/subscription">
