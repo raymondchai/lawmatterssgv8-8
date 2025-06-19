@@ -30,9 +30,17 @@ export const documentsApi = {
     const user = await supabase.auth.getUser();
     if (!user.data.user) throw new Error('User not authenticated');
 
+    // Check usage limits before upload
+    const { usageTrackingService } = await import('@/lib/services/usageTracking');
+    const usageCheck = await usageTrackingService.checkUsageLimit('document_upload');
+
+    if (!usageCheck.allowed) {
+      throw new Error(`Upload limit exceeded. You have used ${usageCheck.current}/${usageCheck.limit} document uploads this month. Please upgrade your plan to continue.`);
+    }
+
     // Upload file to storage
     const fileName = `${user.data.user.id}/${Date.now()}-${file.name}`;
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from('documents')
       .upload(fileName, file);
 
@@ -118,5 +126,50 @@ export const documentsApi = {
 
     if (error) throw error;
     return data as UploadedDocument[];
+  },
+
+  // Download document with usage tracking
+  async downloadDocument(id: string, trackUsage: boolean = true) {
+    const user = await supabase.auth.getUser();
+    if (!user.data.user) throw new Error('User not authenticated');
+
+    // Get document info
+    const document = await this.getDocument(id);
+
+    if (trackUsage) {
+      // Check and increment download usage
+      const { usageTrackingService } = await import('@/lib/services/usageTracking');
+      const usageCheck = await usageTrackingService.checkAndIncrementUsage('document_download', id, {
+        filename: document.filename,
+        document_type: document.document_type,
+        file_size: document.file_size
+      });
+
+      if (!usageCheck.allowed) {
+        throw new Error(`Download limit exceeded. You have used ${usageCheck.limit?.current}/${usageCheck.limit?.limit} document downloads this month. Please upgrade your plan to continue.`);
+      }
+    }
+
+    // Get file from storage
+    const fileName = document.file_url.split('/').pop();
+    if (!fileName) throw new Error('Invalid file URL');
+
+    const { data, error } = await supabase.storage
+      .from('documents')
+      .download(fileName);
+
+    if (error) throw error;
+
+    return {
+      data,
+      filename: document.filename,
+      contentType: `application/${document.document_type}`
+    };
+  },
+
+  // Get document usage statistics
+  async getDocumentUsage() {
+    const { usageTrackingService } = await import('@/lib/services/usageTracking');
+    return await usageTrackingService.getUsageStats();
   }
 };

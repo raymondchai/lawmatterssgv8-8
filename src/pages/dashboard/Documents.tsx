@@ -5,6 +5,7 @@ import { DocumentList } from '@/components/legal/DocumentList';
 import { DocumentViewer } from '@/components/legal/DocumentViewer';
 import { DocumentSearch } from '@/components/legal/DocumentSearch';
 import { DocumentStatusTracker } from '@/components/legal/DocumentStatusTracker';
+import DocumentManagementDashboard from '@/components/documents/DocumentManagementDashboard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -107,7 +108,7 @@ const Documents: React.FC = () => {
             ) : (
               /* Main Dashboard Mode */
               <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-                <TabsList className="grid w-full grid-cols-4">
+                <TabsList className="grid w-full grid-cols-5">
                   <TabsTrigger value="overview" className="flex items-center space-x-2">
                     <BarChart3 className="h-4 w-4" />
                     <span>Overview</span>
@@ -123,6 +124,10 @@ const Documents: React.FC = () => {
                   <TabsTrigger value="manage" className="flex items-center space-x-2">
                     <List className="h-4 w-4" />
                     <span>Manage</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="enhanced" className="flex items-center space-x-2">
+                    <TrendingUp className="h-4 w-4" />
+                    <span>Enhanced</span>
                   </TabsTrigger>
                 </TabsList>
 
@@ -261,6 +266,11 @@ const Documents: React.FC = () => {
                       />
                     </div>
                   </div>
+                </TabsContent>
+
+                <TabsContent value="enhanced" className="space-y-6">
+                  {/* Enhanced Document Management Dashboard */}
+                  <DocumentManagementDashboard />
                 </TabsContent>
               </Tabs>
             )}

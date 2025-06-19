@@ -30,6 +30,14 @@ export async function processDocument(
   onProgress?: (status: ProcessingStatus) => void
 ): Promise<DocumentProcessingResult> {
   try {
+    // Check AI usage limits before processing
+    const { usageTrackingService } = await import('@/lib/services/usageTracking');
+    const usageCheck = await usageTrackingService.checkUsageLimit('ai_query');
+
+    if (!usageCheck.allowed) {
+      throw new Error(`AI processing limit exceeded. You have used ${usageCheck.current}/${usageCheck.limit} AI queries this month. Please upgrade your plan to continue.`);
+    }
+
     // Stage 1: OCR Processing
     onProgress?.({
       stage: 'ocr',
@@ -72,6 +80,13 @@ export async function processDocument(
     });
 
     const analysis = await analyzeDocument(cleanedText);
+
+    // Track AI usage for document analysis
+    await usageTrackingService.incrementUsage('ai_query', documentId, {
+      operation: 'document_analysis',
+      text_length: cleanedText.length,
+      document_type: file.type
+    });
 
     // Update document with analysis results
     const { error: analysisUpdateError } = await supabase

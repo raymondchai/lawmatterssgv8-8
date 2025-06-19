@@ -18,6 +18,7 @@ import Subscription from "./pages/dashboard/Subscription";
 import Subscribe from "./pages/Subscribe";
 import PaymentSuccess from "./pages/payment/PaymentSuccess";
 import PaymentFailure from "./pages/payment/PaymentFailure";
+import SharedDocument from "./pages/SharedDocument";
 import NotFound from "./pages/NotFound";
 import { ROUTES } from "@/lib/config/constants";
 
@@ -45,6 +46,7 @@ const App = () => (
             <Route path="/subscribe/:tier" element={<Subscribe />} />
             <Route path="/payment/success" element={<PaymentSuccess />} />
             <Route path="/payment/failure" element={<PaymentFailure />} />
+            <Route path="/shared/:shareToken" element={<SharedDocument />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -7,7 +7,6 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Upload, FileText, X, CheckCircle, AlertCircle, Brain, Eye, Zap } from 'lucide-react';
 import { documentsApi } from '@/lib/api/documents';
-import { profilesApi } from '@/lib/api/profiles';
 import { processDocument, type ProcessingStatus } from '@/lib/services/documentProcessor';
 import { DOCUMENT_TYPES, FILE_UPLOAD } from '@/lib/config/constants';
 import { useAuth } from '@/contexts/AuthContext';
@@ -39,15 +38,24 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
   const { profile } = useAuth();
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
-    // Check usage limits
+    // Check usage limits with new usage tracking service
     try {
-      const canUpload = await profilesApi.checkUsageLimit('document_upload');
-      if (!canUpload) {
-        toast.error('Upload limit reached for your subscription tier');
+      const { usageTrackingService } = await import('@/lib/services/usageTracking');
+      const usageLimit = await usageTrackingService.checkUsageLimit('document_upload');
+
+      if (!usageLimit.allowed) {
+        toast.error(`Upload limit reached. You have used ${usageLimit.current}/${usageLimit.limit} document uploads this month. Please upgrade your plan to continue.`);
         return;
+      }
+
+      // Warn if approaching limit (80% or more)
+      if (usageLimit.percentage >= 80) {
+        toast.warning(`You have used ${usageLimit.current}/${usageLimit.limit} document uploads this month (${Math.round(usageLimit.percentage)}%).`);
       }
     } catch (error) {
       console.error('Error checking usage limits:', error);
+      toast.error('Unable to verify upload limits. Please try again.');
+      return;
     }
 
     // Check file size limits based on subscription tier
@@ -116,8 +124,13 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
 
         const document = await documentsApi.uploadDocument(uploadFile.file, uploadFile.documentType);
 
-        // Increment usage counter
-        await profilesApi.incrementUsage('document_upload');
+        // Increment usage counter with new tracking service
+        const { usageTrackingService } = await import('@/lib/services/usageTracking');
+        await usageTrackingService.incrementUsage('document_upload', document.id, {
+          filename: uploadFile.file.name,
+          file_size: uploadFile.file.size,
+          document_type: uploadFile.documentType
+        });
 
         // Stage 2: Start AI processing
         setUploadFiles(prev => prev.map(f =>
