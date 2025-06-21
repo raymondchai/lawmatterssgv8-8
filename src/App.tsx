@@ -23,6 +23,7 @@ import DashboardLawFirms from "./pages/dashboard/LawFirms";
 import Admin from "./pages/dashboard/Admin";
 import Subscription from "./pages/dashboard/Subscription";
 import Settings from "./pages/dashboard/Settings";
+import SecuritySettings from "./pages/dashboard/SecuritySettings";
 import Subscribe from "./pages/Subscribe";
 import PaymentSuccess from "./pages/payment/PaymentSuccess";
 import PaymentFailure from "./pages/payment/PaymentFailure";
@@ -70,6 +71,7 @@ const App = () => (
             <Route path="/dashboard/search-history" element={<SearchHistory />} />
             <Route path="/dashboard/subscription" element={<Subscription />} />
             <Route path="/dashboard/settings" element={<Settings />} />
+            <Route path="/dashboard/security" element={<SecuritySettings />} />
             <Route path="/subscribe/:tier" element={<Subscribe />} />
             <Route path="/payment/success" element={<PaymentSuccess />} />
             <Route path="/payment/failure" element={<PaymentFailure />} />

@@ -238,12 +238,12 @@ export default function TemplateBrowser() {
             </div>
 
             {/* Category Filter */}
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+            <Select value={selectedCategory || "all"} onValueChange={(value) => setSelectedCategory(value === "all" ? "" : value)}>
               <SelectTrigger className="w-full lg:w-48">
                 <SelectValue placeholder="All Categories" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Categories</SelectItem>
+                <SelectItem value="all">All Categories</SelectItem>
                 {categories.map((category) => (
                   <SelectItem key={category.id} value={category.id}>
                     <div className="flex items-center gap-2">
@@ -256,12 +256,12 @@ export default function TemplateBrowser() {
             </Select>
 
             {/* Access Level Filter */}
-            <Select value={selectedAccessLevel} onValueChange={setSelectedAccessLevel}>
+            <Select value={selectedAccessLevel || "all"} onValueChange={(value) => setSelectedAccessLevel(value === "all" ? "" : value)}>
               <SelectTrigger className="w-full lg:w-32">
                 <SelectValue placeholder="All" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All</SelectItem>
+                <SelectItem value="all">All</SelectItem>
                 <SelectItem value="public">Free</SelectItem>
                 <SelectItem value="premium">Premium</SelectItem>
                 <SelectItem value="enterprise">Enterprise</SelectItem>

@@ -199,6 +199,7 @@ export const ROUTES = {
   aiChat: '/dashboard/ai-chat',
   profile: '/dashboard/profile',
   subscription: '/dashboard/subscription',
+  security: '/dashboard/security',
   lawFirms: '/law-firms',
   pricing: '/pricing',
   subscribe: '/subscribe',

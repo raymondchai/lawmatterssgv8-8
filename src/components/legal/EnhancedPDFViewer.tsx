@@ -22,9 +22,9 @@ import {
   EyeOff
 } from 'lucide-react';
 import { toast } from '@/components/ui/sonner';
-import { useAnnotations } from '@/hooks/useAnnotations';
+import { useDocumentAnnotations } from '@/hooks/useAnnotations';
 import { useAuth } from '@/contexts/AuthContext';
-import { useDocumentCollaboration } from '@/hooks/useRealTime';
+
 import { ConnectionStatus } from '@/components/realtime/ConnectionStatus';
 import type { DocumentAnnotation } from '@/lib/api/annotations';
 import { formatDistanceToNow } from 'date-fns';
@@ -72,22 +72,16 @@ export const EnhancedPDFViewer: React.FC<EnhancedPDFViewerProps> = ({
   // Use the annotations hook for database-backed annotations
   const {
     annotations,
-    loading: annotationsLoading,
+    isLoading: annotationsLoading,
     createAnnotation,
     updateAnnotation,
-    deleteAnnotation,
-    createReply
-  } = useAnnotations(documentId);
+    deleteAnnotation
+  } = useDocumentAnnotations(documentId);
 
   const { user } = useAuth();
 
-  // Real-time collaboration features
-  const {
-    processingStatus,
-    presenceData,
-    updateCurrentPage,
-    isConnected
-  } = useDocumentCollaboration(documentId);
+  // Real-time collaboration features are available via useDocumentCollaboration
+  // Currently not used in this component but hook is available for future enhancements
 
   // Notify parent component when annotations change
   useEffect(() => {

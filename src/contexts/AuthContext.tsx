@@ -3,6 +3,7 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { profilesApi } from '@/lib/api/profiles';
 import { twoFactorService } from '@/lib/services/twoFactor';
+import { sessionSecurityService } from '@/lib/services/sessionSecurity';
 import type { User as ProfileUser } from '@/types';
 
 interface AuthContextType {
@@ -91,22 +92,68 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const signIn = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      // Get IP address for security tracking
+      const ipAddress = await getUserIP();
 
-    if (error) throw error;
+      // Check rate limiting
+      const rateLimit = await sessionSecurityService.checkRateLimit(ipAddress);
+      if (!rateLimit.allowed) {
+        const resetTime = rateLimit.resetTime ? ` Try again ${rateLimit.resetTime.toLocaleTimeString()}.` : '';
+        throw new Error(`Too many failed login attempts.${resetTime}`);
+      }
 
-    // Check if user has 2FA enabled
-    if (data.user && twoFactorService.isTwoFactorEnabled(data.user)) {
-      setRequiresTwoFactor(true);
-      // Sign out temporarily until 2FA is verified
-      await supabase.auth.signOut();
-      return { requiresTwoFactor: true };
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        // Record failed login attempt
+        await sessionSecurityService.recordFailedLogin(ipAddress);
+        await sessionSecurityService.logSecurityEvent('failed_login', {
+          email,
+          error: error.message
+        });
+        throw error;
+      }
+
+      // Reset login attempts on successful login
+      await sessionSecurityService.resetLoginAttempts(ipAddress);
+
+      // Check if user has 2FA enabled
+      if (data.user && twoFactorService.isTwoFactorEnabled(data.user)) {
+        setRequiresTwoFactor(true);
+        // Sign out temporarily until 2FA is verified
+        await supabase.auth.signOut();
+        return { requiresTwoFactor: true };
+      }
+
+      // Track successful login
+      if (data.session && data.user) {
+        await sessionSecurityService.trackSession(data.session.access_token, data.user.id);
+        await sessionSecurityService.logSecurityEvent('login', {
+          sessionId: data.session.access_token
+        });
+      }
+
+      return {};
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
     }
+  };
 
-    return {};
+  // Helper function to get user IP
+  const getUserIP = async (): Promise<string> => {
+    try {
+      const response = await fetch('https://api.ipify.org?format=json');
+      const data = await response.json();
+      return data.ip;
+    } catch (error) {
+      console.error('Error getting IP address:', error);
+      return 'unknown';
+    }
   };
 
   const signUp = async (email: string, password: string, metadata?: Record<string, any>) => {
@@ -121,9 +168,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
-    setProfile(null);
+    try {
+      // Log security event before signing out
+      await sessionSecurityService.logSecurityEvent('logout');
+
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+
+      setProfile(null);
+    } catch (error) {
+      console.error('Sign out error:', error);
+      throw error;
+    }
   };
 
   const resetPassword = async (email: string) => {
@@ -134,8 +190,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const updatePassword = async (password: string) => {
-    const { error } = await supabase.auth.updateUser({ password });
-    if (error) throw error;
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) throw error;
+
+      // Log password change event
+      await sessionSecurityService.logSecurityEvent('password_change');
+    } catch (error) {
+      console.error('Password update error:', error);
+      throw error;
+    }
   };
 
   const refreshProfile = async () => {

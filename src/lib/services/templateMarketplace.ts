@@ -245,6 +245,13 @@ class TemplateMarketplaceService {
   }
 
   /**
+   * Get a single template by slug (alias for getTemplate)
+   */
+  async getTemplateBySlug(slug: string): Promise<Template | null> {
+    return this.getTemplate(slug);
+  }
+
+  /**
    * Get featured templates
    */
   async getFeaturedTemplates(limit: number = 6): Promise<Template[]> {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -8,8 +8,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Eye, EyeOff } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Loader2, Eye, EyeOff, Shield, AlertTriangle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { sessionSecurityService } from '@/lib/services/sessionSecurity';
 import { TwoFactorVerification } from './TwoFactorVerification';
 import { ROUTES } from '@/lib/config/constants';
 
@@ -26,8 +28,34 @@ export const LoginForm: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [showTwoFactor, setShowTwoFactor] = useState(false);
   const [userEmail, setUserEmail] = useState<string>('');
+  const [rateLimitInfo, setRateLimitInfo] = useState<{
+    attemptsRemaining: number;
+    resetTime?: Date;
+    isBlocked: boolean;
+  } | null>(null);
   const { signIn, verifyTwoFactor } = useAuth();
   const navigate = useNavigate();
+
+  // Check rate limit status on component mount
+  useEffect(() => {
+    const checkRateLimit = async () => {
+      try {
+        const response = await fetch('https://api.ipify.org?format=json');
+        const data = await response.json();
+        const rateLimit = await sessionSecurityService.checkRateLimit(data.ip);
+
+        setRateLimitInfo({
+          attemptsRemaining: rateLimit.attemptsRemaining,
+          resetTime: rateLimit.resetTime,
+          isBlocked: !rateLimit.allowed
+        });
+      } catch (error) {
+        console.error('Error checking rate limit:', error);
+      }
+    };
+
+    checkRateLimit();
+  }, []);
 
   const {
     register,
@@ -93,6 +121,24 @@ export const LoginForm: React.FC = () => {
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
+
+            {rateLimitInfo?.isBlocked && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  Too many failed login attempts. Please try again {rateLimitInfo.resetTime?.toLocaleTimeString()}.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {rateLimitInfo && !rateLimitInfo.isBlocked && rateLimitInfo.attemptsRemaining < 3 && (
+              <Alert>
+                <Shield className="h-4 w-4" />
+                <AlertDescription>
+                  {rateLimitInfo.attemptsRemaining} login attempts remaining before temporary lockout.
+                </AlertDescription>
+              </Alert>
+            )}
             
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
@@ -152,10 +198,10 @@ export const LoginForm: React.FC = () => {
             <Button
               type="submit"
               className="w-full"
-              disabled={isLoading}
+              disabled={isLoading || rateLimitInfo?.isBlocked}
             >
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Sign in
+              {rateLimitInfo?.isBlocked ? 'Account Temporarily Locked' : 'Sign in'}
             </Button>
             
             <p className="text-center text-sm text-gray-600">

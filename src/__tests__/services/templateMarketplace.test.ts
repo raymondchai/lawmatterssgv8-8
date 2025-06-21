@@ -56,7 +56,15 @@ describe('TemplateMarketplaceService', () => {
         })
       };
 
-      mockSupabaseFrom.mockReturnValue(mockQuery as any);
+      const mockCountQuery = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        count: 1
+      };
+
+      mockSupabaseFrom
+        .mockReturnValueOnce(mockQuery as any)
+        .mockReturnValueOnce(mockCountQuery as any);
 
       const filters = {
         query: 'test',
@@ -79,7 +87,12 @@ describe('TemplateMarketplaceService', () => {
           })
         ]),
         total: 1,
-        hasMore: false
+        hasMore: false,
+        filters: {
+          categories: [],
+          priceRanges: [],
+          tags: []
+        }
       });
 
       expect(mockSupabaseFrom).toHaveBeenCalledWith('templates');
@@ -129,6 +142,7 @@ describe('TemplateMarketplaceService', () => {
 
       const mockQuery = {
         select: vi.fn().mockReturnThis(),
+        or: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue({
           data: mockTemplate,
@@ -146,12 +160,13 @@ describe('TemplateMarketplaceService', () => {
         slug: 'test-template'
       }));
 
-      expect(mockQuery.eq).toHaveBeenCalledWith('slug', 'test-template');
+      expect(mockQuery.or).toHaveBeenCalledWith('id.eq.test-template,slug.eq.test-template');
     });
 
     it('should return null for non-existent template', async () => {
       const mockQuery = {
         select: vi.fn().mockReturnThis(),
+        or: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue({
           data: null,
