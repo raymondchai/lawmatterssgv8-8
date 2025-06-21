@@ -20,6 +20,7 @@ import { ContentModeration } from '@/components/admin/ContentModeration';
 import { SystemMonitoring } from '@/components/admin/SystemMonitoring';
 import { AdminLawFirmManager } from '@/components/lawfirms/AdminLawFirmManager';
 import { TemplateManagement } from '@/components/admin/TemplateManagement';
+import { TemplateAnalyticsDashboard } from '@/components/analytics';
 import { usePermissions, useRoleAccess, PERMISSIONS } from '@/hooks/usePermissions';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -119,6 +120,13 @@ const Admin: React.FC = () => {
       icon: FileText,
       action: () => setActiveTab('templates'),
       permission: PERMISSIONS.TEMPLATES_MANAGE
+    },
+    {
+      title: 'Analytics Dashboard',
+      description: 'View template marketplace analytics',
+      icon: BarChart3,
+      action: () => setActiveTab('analytics'),
+      permission: PERMISSIONS.SYSTEM_ANALYTICS
     }
   ];
 
@@ -128,6 +136,7 @@ const Admin: React.FC = () => {
     { id: 'moderation', label: 'Moderation', icon: Flag, permission: PERMISSIONS.LAW_FIRMS_MODERATE_REVIEWS },
     { id: 'lawfirms', label: 'Law Firms', icon: Database, permission: PERMISSIONS.LAW_FIRMS_VERIFY },
     { id: 'templates', label: 'Templates', icon: FileText, permission: PERMISSIONS.TEMPLATES_MANAGE },
+    { id: 'analytics', label: 'Analytics', icon: BarChart3, permission: PERMISSIONS.SYSTEM_ANALYTICS },
     { id: 'monitoring', label: 'Monitoring', icon: Activity, permission: PERMISSIONS.SYSTEM_MONITORING }
   ].filter(tab => !tab.permission || hasPermission(tab.permission));
 
@@ -152,7 +161,7 @@ const Admin: React.FC = () => {
 
         {/* Admin Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className={`grid w-full grid-cols-${availableTabs.length}`}>
             {availableTabs.map((tab) => (
               <TabsTrigger key={tab.id} value={tab.id} className="flex items-center space-x-2">
                 <tab.icon className="h-4 w-4" />
@@ -335,6 +344,12 @@ const Admin: React.FC = () => {
           {hasPermission(PERMISSIONS.TEMPLATES_MANAGE) && (
             <TabsContent value="templates">
               <TemplateManagement />
+            </TabsContent>
+          )}
+
+          {hasPermission(PERMISSIONS.SYSTEM_ANALYTICS) && (
+            <TabsContent value="analytics">
+              <TemplateAnalyticsDashboard />
             </TabsContent>
           )}
 

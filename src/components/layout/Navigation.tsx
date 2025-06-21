@@ -2,14 +2,26 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, User, Building2, FileText, MessageSquare } from "lucide-react";
+import { Menu, User, Building2, FileText, MessageSquare, Search } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 export const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showSearch, setShowSearch] = useState(false);
   const navigate = useNavigate();
   const { user } = useAuth();
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/legal-qa?q=${encodeURIComponent(searchQuery)}`);
+      setSearchQuery("");
+      setShowSearch(false);
+    }
+  };
 
   const navItems = [
     { name: "Home", href: "/" },
@@ -32,8 +44,8 @@ export const Navigation = () => {
           </div>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:block">
-            <div className="ml-10 flex items-baseline space-x-4">
+          <div className="hidden md:flex items-center space-x-6">
+            <div className="flex items-baseline space-x-4">
               {navItems.map((item) => (
                 <Link
                   key={item.name}
@@ -48,6 +60,43 @@ export const Navigation = () => {
                   <span>{item.name}</span>
                 </Link>
               ))}
+            </div>
+
+            {/* Search Bar */}
+            <div className="relative">
+              {showSearch ? (
+                <form onSubmit={handleSearch} className="flex items-center">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                    <Input
+                      type="text"
+                      placeholder="Search legal topics..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10 pr-4 py-2 w-64 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                      autoFocus
+                      onBlur={() => {
+                        if (!searchQuery.trim()) {
+                          setShowSearch(false);
+                        }
+                      }}
+                    />
+                  </div>
+                  <Button type="submit" size="sm" className="ml-2 bg-blue-600 hover:bg-blue-700">
+                    Search
+                  </Button>
+                </form>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowSearch(true)}
+                  className="flex items-center space-x-2"
+                >
+                  <Search className="h-4 w-4" />
+                  <span>Search</span>
+                </Button>
+              )}
             </div>
           </div>
 
@@ -89,6 +138,23 @@ export const Navigation = () => {
               </SheetTrigger>
               <SheetContent side="right" className="w-[300px] sm:w-[400px]">
                 <div className="flex flex-col space-y-4 mt-8">
+                  {/* Mobile Search */}
+                  <form onSubmit={handleSearch} className="mb-4">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                      <Input
+                        type="text"
+                        placeholder="Search legal topics..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-10 pr-4 py-2 w-full border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                      />
+                    </div>
+                    <Button type="submit" className="w-full mt-2 bg-blue-600 hover:bg-blue-700">
+                      Search
+                    </Button>
+                  </form>
+
                   {navItems.map((item) => (
                     <Link
                       key={item.name}

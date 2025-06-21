@@ -1,5 +1,11 @@
+/**
+ * API service for PDF annotations and highlights
+ * Updated to work with existing document_annotations schema
+ */
+
 import { supabase } from '@/lib/supabase';
 
+// Legacy types to match existing schema
 export interface DocumentAnnotation {
   id: string;
   document_id: string;
@@ -17,49 +23,9 @@ export interface DocumentAnnotation {
   is_resolved: boolean;
   created_at: string;
   updated_at: string;
-  user?: {
-    id: string;
-    first_name: string;
-    last_name: string;
-    avatar_url?: string;
-  };
-  replies?: AnnotationReply[];
 }
 
-export interface AnnotationReply {
-  id: string;
-  annotation_id: string;
-  user_id: string;
-  content: string;
-  created_at: string;
-  updated_at: string;
-  user?: {
-    id: string;
-    first_name: string;
-    last_name: string;
-    avatar_url?: string;
-  };
-}
-
-export interface AnnotationCollaborator {
-  id: string;
-  document_id: string;
-  user_id: string;
-  invited_by: string;
-  permission_level: 'view' | 'comment' | 'edit';
-  status: 'pending' | 'accepted' | 'declined';
-  created_at: string;
-  updated_at: string;
-  user?: {
-    id: string;
-    first_name: string;
-    last_name: string;
-    email: string;
-    avatar_url?: string;
-  };
-}
-
-export interface CreateAnnotationData {
+export interface CreateAnnotationRequest {
   document_id: string;
   type: 'highlight' | 'note' | 'sticky';
   page_number: number;
@@ -73,7 +39,7 @@ export interface CreateAnnotationData {
   color: string;
 }
 
-export interface UpdateAnnotationData {
+export interface UpdateAnnotationRequest {
   content?: string;
   color?: string;
   is_resolved?: boolean;
@@ -85,203 +51,123 @@ export interface UpdateAnnotationData {
   };
 }
 
-export interface CreateReplyData {
-  annotation_id: string;
-  content: string;
-}
-
-export interface InviteCollaboratorData {
-  document_id: string;
-  email: string;
-  permission_level: 'view' | 'comment' | 'edit';
-}
-
-export const annotationsApi = {
-  // Get all annotations for a document
+class AnnotationsApi {
+  /**
+   * Get all annotations for a document
+   */
   async getDocumentAnnotations(documentId: string): Promise<DocumentAnnotation[]> {
     const { data, error } = await supabase
       .from('document_annotations')
-      .select(`
-        *,
-        user:profiles!document_annotations_user_id_fkey (
-          id,
-          first_name,
-          last_name,
-          avatar_url
-        ),
-        replies:annotation_replies (
-          *,
-          user:profiles!annotation_replies_user_id_fkey (
-            id,
-            first_name,
-            last_name,
-            avatar_url
-          )
-        )
-      `)
+      .select('*')
       .eq('document_id', documentId)
       .order('created_at', { ascending: true });
 
     if (error) {
-      console.error('Error fetching annotations:', error);
-      throw new Error('Failed to fetch annotations');
+      throw new Error(`Failed to fetch annotations: ${error.message}`);
     }
 
     return data || [];
-  },
+  }
 
-  // Create a new annotation
-  async createAnnotation(annotationData: CreateAnnotationData): Promise<DocumentAnnotation> {
+  /**
+   * Create a new annotation
+   */
+  async createAnnotation(annotation: CreateAnnotationRequest): Promise<DocumentAnnotation> {
+    const { data: user } = await supabase.auth.getUser();
+    if (!user.user) {
+      throw new Error('User not authenticated');
+    }
+
     const { data, error } = await supabase
       .from('document_annotations')
-      .insert(annotationData)
-      .select(`
-        *,
-        user:profiles!document_annotations_user_id_fkey (
-          id,
-          first_name,
-          last_name,
-          avatar_url
-        )
-      `)
+      .insert({
+        ...annotation,
+        user_id: user.user.id,
+        is_resolved: false
+      })
+      .select()
       .single();
 
     if (error) {
-      console.error('Error creating annotation:', error);
-      throw new Error('Failed to create annotation');
+      throw new Error(`Failed to create annotation: ${error.message}`);
     }
 
     return data;
-  },
+  }
 
-  // Update an annotation
-  async updateAnnotation(annotationId: string, updates: UpdateAnnotationData): Promise<DocumentAnnotation> {
+  /**
+   * Update an annotation
+   */
+  async updateAnnotation(id: string, updates: UpdateAnnotationRequest): Promise<DocumentAnnotation> {
     const { data, error } = await supabase
       .from('document_annotations')
       .update(updates)
-      .eq('id', annotationId)
-      .select(`
-        *,
-        user:profiles!document_annotations_user_id_fkey (
-          id,
-          first_name,
-          last_name,
-          avatar_url
-        )
-      `)
+      .eq('id', id)
+      .select()
       .single();
 
     if (error) {
-      console.error('Error updating annotation:', error);
-      throw new Error('Failed to update annotation');
+      throw new Error(`Failed to update annotation: ${error.message}`);
     }
 
     return data;
-  },
+  }
 
-  // Delete an annotation
-  async deleteAnnotation(annotationId: string): Promise<void> {
+  /**
+   * Delete an annotation
+   */
+  async deleteAnnotation(id: string): Promise<void> {
     const { error } = await supabase
       .from('document_annotations')
       .delete()
-      .eq('id', annotationId);
+      .eq('id', id);
 
     if (error) {
-      console.error('Error deleting annotation:', error);
-      throw new Error('Failed to delete annotation');
+      throw new Error(`Failed to delete annotation: ${error.message}`);
     }
-  },
+  }
 
-  // Create a reply to an annotation
-  async createReply(replyData: CreateReplyData): Promise<AnnotationReply> {
-    const { data, error } = await supabase
-      .from('annotation_replies')
-      .insert(replyData)
-      .select(`
-        *,
-        user:profiles!annotation_replies_user_id_fkey (
-          id,
-          first_name,
-          last_name,
-          avatar_url
-        )
-      `)
-      .single();
+  // Real-time subscription for annotations
+  subscribeToAnnotations(documentId: string, callback: (payload: any) => void) {
+    return supabase
+      .channel(`annotations:${documentId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'document_annotations',
+          filter: `document_id=eq.${documentId}`
+        },
+        callback
+      )
+      .subscribe();
+  }
 
-    if (error) {
-      console.error('Error creating reply:', error);
-      throw new Error('Failed to create reply');
-    }
-
-    return data;
-  },
-
-  // Update a reply
-  async updateReply(replyId: string, content: string): Promise<AnnotationReply> {
-    const { data, error } = await supabase
-      .from('annotation_replies')
-      .update({ content })
-      .eq('id', replyId)
-      .select(`
-        *,
-        user:profiles!annotation_replies_user_id_fkey (
-          id,
-          first_name,
-          last_name,
-          avatar_url
-        )
-      `)
-      .single();
-
-    if (error) {
-      console.error('Error updating reply:', error);
-      throw new Error('Failed to update reply');
-    }
-
-    return data;
-  },
-
-  // Delete a reply
-  async deleteReply(replyId: string): Promise<void> {
-    const { error } = await supabase
-      .from('annotation_replies')
-      .delete()
-      .eq('id', replyId);
-
-    if (error) {
-      console.error('Error deleting reply:', error);
-      throw new Error('Failed to delete reply');
-    }
-  },
-
-  // Get collaborators for a document
-  async getDocumentCollaborators(documentId: string): Promise<AnnotationCollaborator[]> {
+  // Get document collaborators
+  async getDocumentCollaborators(documentId: string) {
     const { data, error } = await supabase
       .from('annotation_collaborators')
       .select(`
         *,
-        user:profiles!annotation_collaborators_user_id_fkey (
-          id,
-          first_name,
-          last_name,
-          email,
-          avatar_url
-        )
+        user:profiles!annotation_collaborators_user_id_fkey(id, email, first_name, last_name),
+        invited_by_user:profiles!annotation_collaborators_invited_by_fkey(id, email, first_name, last_name)
       `)
-      .eq('document_id', documentId)
-      .order('created_at', { ascending: true });
+      .eq('document_id', documentId);
 
     if (error) {
-      console.error('Error fetching collaborators:', error);
-      throw new Error('Failed to fetch collaborators');
+      throw new Error(`Failed to fetch collaborators: ${error.message}`);
     }
 
     return data || [];
-  },
+  }
 
-  // Invite a collaborator
-  async inviteCollaborator(inviteData: InviteCollaboratorData): Promise<AnnotationCollaborator> {
-    // First, find the user by email
+  // Invite collaborator
+  async inviteCollaborator(inviteData: {
+    document_id: string;
+    email: string;
+    permission_level: 'view' | 'comment' | 'edit';
+  }) {
     const { data: userData, error: userError } = await supabase
       .from('profiles')
       .select('id')
@@ -300,120 +186,72 @@ export const annotationsApi = {
         permission_level: inviteData.permission_level,
         invited_by: (await supabase.auth.getUser()).data.user?.id
       })
-      .select(`
-        *,
-        user:profiles!annotation_collaborators_user_id_fkey (
-          id,
-          first_name,
-          last_name,
-          email,
-          avatar_url
-        )
-      `)
+      .select()
       .single();
 
     if (error) {
-      console.error('Error inviting collaborator:', error);
-      throw new Error('Failed to invite collaborator');
+      throw new Error(`Failed to invite collaborator: ${error.message}`);
     }
 
     return data;
-  },
-
-  // Update collaborator permission
-  async updateCollaboratorPermission(
-    collaboratorId: string, 
-    permissionLevel: 'view' | 'comment' | 'edit'
-  ): Promise<AnnotationCollaborator> {
-    const { data, error } = await supabase
-      .from('annotation_collaborators')
-      .update({ permission_level: permissionLevel })
-      .eq('id', collaboratorId)
-      .select(`
-        *,
-        user:profiles!annotation_collaborators_user_id_fkey (
-          id,
-          first_name,
-          last_name,
-          email,
-          avatar_url
-        )
-      `)
-      .single();
-
-    if (error) {
-      console.error('Error updating collaborator permission:', error);
-      throw new Error('Failed to update collaborator permission');
-    }
-
-    return data;
-  },
-
-  // Accept/decline collaboration invitation
-  async updateCollaborationStatus(
-    collaboratorId: string, 
-    status: 'accepted' | 'declined'
-  ): Promise<AnnotationCollaborator> {
-    const { data, error } = await supabase
-      .from('annotation_collaborators')
-      .update({ status })
-      .eq('id', collaboratorId)
-      .select(`
-        *,
-        user:profiles!annotation_collaborators_user_id_fkey (
-          id,
-          first_name,
-          last_name,
-          email,
-          avatar_url
-        )
-      `)
-      .single();
-
-    if (error) {
-      console.error('Error updating collaboration status:', error);
-      throw new Error('Failed to update collaboration status');
-    }
-
-    return data;
-  },
+  }
 
   // Remove collaborator
-  async removeCollaborator(collaboratorId: string): Promise<void> {
+  async removeCollaborator(collaboratorId: string) {
     const { error } = await supabase
       .from('annotation_collaborators')
       .delete()
       .eq('id', collaboratorId);
 
     if (error) {
-      console.error('Error removing collaborator:', error);
-      throw new Error('Failed to remove collaborator');
+      throw new Error(`Failed to remove collaborator: ${error.message}`);
     }
-  },
-
-  // Subscribe to real-time annotation changes
-  subscribeToAnnotations(documentId: string, callback: (payload: any) => void) {
-    return supabase
-      .channel(`annotations:${documentId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'document_annotations',
-          filter: `document_id=eq.${documentId}`
-        },
-        callback
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'annotation_replies'
-        },
-        callback
-      )
-      .subscribe();
   }
-};
+
+  // Update collaborator permission
+  async updateCollaboratorPermission(collaboratorId: string, permissionLevel: 'view' | 'comment' | 'edit') {
+    const { data, error } = await supabase
+      .from('annotation_collaborators')
+      .update({ permission_level: permissionLevel })
+      .eq('id', collaboratorId)
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error(`Failed to update permission: ${error.message}`);
+    }
+
+    return data;
+  }
+
+  // Create reply to annotation
+  async createReply(replyData: {
+    annotation_id: string;
+    content: string;
+  }) {
+    const { data: user } = await supabase.auth.getUser();
+    if (!user.user) {
+      throw new Error('User not authenticated');
+    }
+
+    const { data, error } = await supabase
+      .from('annotation_replies')
+      .insert({
+        ...replyData,
+        user_id: user.user.id
+      })
+      .select(`
+        *,
+        user:profiles!annotation_replies_user_id_fkey(id, email, first_name, last_name)
+      `)
+      .single();
+
+    if (error) {
+      throw new Error(`Failed to create reply: ${error.message}`);
+    }
+
+    return data;
+  }
+}
+
+export const annotationsApi = new AnnotationsApi();

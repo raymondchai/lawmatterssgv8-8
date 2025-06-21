@@ -20,7 +20,9 @@ import {
   CreditCard,
   LogOut,
   User,
-  Shield
+  Shield,
+  Search,
+  BarChart3
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { ConnectionStatus } from '@/components/realtime/ConnectionStatus';
@@ -37,6 +39,9 @@ const navigation = [
   { name: 'AI Assistant', href: '/dashboard/ai-assistant', icon: MessageSquare },
   { name: 'Templates', href: '/dashboard/templates', icon: Files },
   { name: 'Law Firms', href: '/dashboard/law-firms', icon: Building2 },
+  { name: 'Legal Q&A', href: '/legal-qa', icon: MessageSquare },
+  { name: 'Document Analysis', href: '/analyze', icon: BarChart3 },
+  { name: 'Search History', href: '/dashboard/search-history', icon: Search },
 ];
 
 export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {

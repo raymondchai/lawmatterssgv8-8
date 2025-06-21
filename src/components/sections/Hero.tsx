@@ -2,13 +2,40 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, FileText, MessageSquare, Building2, Zap } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ROUTES } from "@/lib/config/constants";
+import { platformStatsService } from "@/lib/services/platformStats";
 
 export const Hero = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [stats, setStats] = useState({
+    legalProfessionals: 500,
+    documentsProcessed: 10000,
+    questionsAnswered: 15000
+  });
+  const [statsLoading, setStatsLoading] = useState(true);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const loadStats = async () => {
+      try {
+        const platformStats = await platformStatsService.getStats();
+        setStats({
+          legalProfessionals: platformStats.legalProfessionals,
+          documentsProcessed: platformStats.documentsProcessed,
+          questionsAnswered: platformStats.questionsAnswered
+        });
+      } catch (error) {
+        console.error('Error loading platform stats:', error);
+        // Keep fallback values
+      } finally {
+        setStatsLoading(false);
+      }
+    };
+
+    loadStats();
+  }, []);
 
   const handleSearch = () => {
     if (searchQuery.trim()) {
@@ -101,21 +128,39 @@ export const Hero = () => {
                 <div className="flex items-center justify-center mb-2">
                   <Building2 className="h-8 w-8 text-yellow-300" />
                 </div>
-                <div className="text-2xl font-bold">500+</div>
+                <div className="text-2xl font-bold">
+                  {statsLoading ? (
+                    <div className="animate-pulse bg-blue-600 h-8 w-16 mx-auto rounded"></div>
+                  ) : (
+                    platformStatsService.formatStatNumber(stats.legalProfessionals)
+                  )}
+                </div>
                 <div className="text-sm text-blue-200">Legal Professionals</div>
               </div>
               <div className="text-center">
                 <div className="flex items-center justify-center mb-2">
                   <FileText className="h-8 w-8 text-yellow-300" />
                 </div>
-                <div className="text-2xl font-bold">10,000+</div>
+                <div className="text-2xl font-bold">
+                  {statsLoading ? (
+                    <div className="animate-pulse bg-blue-600 h-8 w-16 mx-auto rounded"></div>
+                  ) : (
+                    platformStatsService.formatStatNumber(stats.documentsProcessed)
+                  )}
+                </div>
                 <div className="text-sm text-blue-200">Documents Simplified</div>
               </div>
               <div className="text-center">
                 <div className="flex items-center justify-center mb-2">
                   <MessageSquare className="h-8 w-8 text-yellow-300" />
                 </div>
-                <div className="text-2xl font-bold">15,000+</div>
+                <div className="text-2xl font-bold">
+                  {statsLoading ? (
+                    <div className="animate-pulse bg-blue-600 h-8 w-16 mx-auto rounded"></div>
+                  ) : (
+                    platformStatsService.formatStatNumber(stats.questionsAnswered)
+                  )}
+                </div>
                 <div className="text-sm text-blue-200">Questions Answered</div>
               </div>
             </div>

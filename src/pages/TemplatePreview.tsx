@@ -9,12 +9,14 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { templateMarketplaceService, type Template } from '@/lib/services/templateMarketplace';
 import { TemplateRating } from '@/components/templates/TemplateRating';
+import { TemplateAccessGate } from '@/components/templates/TemplateAccessGate';
+import { TemplateVersionHistory } from '@/components/templates/TemplateVersionHistory';
 import { ROUTES } from '@/lib/config/constants';
-import { 
-  Star, 
-  Download, 
-  Eye, 
-  Share2, 
+import {
+  Star,
+  Download,
+  Eye,
+  Share2,
   ArrowLeft,
   FileText,
   Settings,
@@ -25,7 +27,8 @@ import {
   AlertCircle,
   ExternalLink,
   Heart,
-  MessageSquare
+  MessageSquare,
+  History
 } from 'lucide-react';
 
 export default function TemplatePreview() {
@@ -186,9 +189,13 @@ export default function TemplatePreview() {
             <span className="text-gray-900">{template.title}</span>
           </div>
 
-          <div className="grid lg:grid-cols-3 gap-8">
-            {/* Main Content */}
-            <div className="lg:col-span-2">
+          <TemplateAccessGate
+            templateAccessLevel={template.accessLevel as 'public' | 'premium' | 'enterprise'}
+            templateId={template.id}
+          >
+            <div className="grid lg:grid-cols-3 gap-8">
+              {/* Main Content */}
+              <div className="lg:col-span-2">
               {/* Header */}
               <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
                 <div className="flex items-start justify-between mb-4">
@@ -251,7 +258,7 @@ export default function TemplatePreview() {
 
               {/* Tabs */}
               <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className="grid w-full grid-cols-4">
+                <TabsList className="grid w-full grid-cols-5">
                   <TabsTrigger value="preview">
                     <Eye className="h-4 w-4 mr-2" />
                     Preview
@@ -267,6 +274,10 @@ export default function TemplatePreview() {
                   <TabsTrigger value="reviews">
                     <Star className="h-4 w-4 mr-2" />
                     Reviews
+                  </TabsTrigger>
+                  <TabsTrigger value="versions">
+                    <History className="h-4 w-4 mr-2" />
+                    Versions
                   </TabsTrigger>
                 </TabsList>
 
@@ -423,6 +434,13 @@ export default function TemplatePreview() {
                 <TabsContent value="reviews" className="mt-6">
                   <TemplateRating template={template} />
                 </TabsContent>
+
+                <TabsContent value="versions" className="mt-6">
+                  <TemplateVersionHistory
+                    templateId={template.id}
+                    currentVersionId={template.id}
+                  />
+                </TabsContent>
               </Tabs>
             </div>
 
@@ -535,7 +553,8 @@ export default function TemplatePreview() {
                 </CardContent>
               </Card>
             </div>
-          </div>
+            </div>
+          </TemplateAccessGate>
         </div>
       </div>
     </div>

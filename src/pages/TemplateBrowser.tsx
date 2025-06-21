@@ -11,7 +11,6 @@ import { templateMarketplaceService, type Template, type TemplateCategory, type 
 import { ROUTES } from '@/lib/config/constants';
 import {
   Search,
-  Filter,
   Star,
   Download,
   Eye,
@@ -61,6 +60,7 @@ export default function TemplateBrowser() {
   // Pagination
   const [hasMore, setHasMore] = useState(true);
   const [total, setTotal] = useState(0);
+  const [currentOffset, setCurrentOffset] = useState(0);
 
   // Load initial data
   useEffect(() => {
@@ -79,6 +79,7 @@ export default function TemplateBrowser() {
       offset: 0
     };
 
+    setCurrentOffset(0);
     searchTemplates(filters);
     updateSearchParams();
   }, [searchQuery, selectedCategory, selectedAccessLevel, sortBy, minRating]);
@@ -127,6 +128,36 @@ export default function TemplateBrowser() {
   const handleSearch = useCallback((query: string) => {
     setSearchQuery(query);
   }, []);
+
+  const handleLoadMore = async () => {
+    if (searchLoading || !hasMore) return;
+
+    try {
+      setSearchLoading(true);
+      const newOffset = currentOffset + 20;
+
+      const filters: TemplateSearchFilters = {
+        query: searchQuery || undefined,
+        categoryId: selectedCategory || undefined,
+        accessLevel: (selectedAccessLevel as any) || undefined,
+        sortBy: sortBy as any,
+        minRating: minRating || undefined,
+        limit: 20,
+        offset: newOffset
+      };
+
+      const result = await templateMarketplaceService.searchTemplates(filters);
+
+      // Append new templates to existing ones
+      setTemplates(prev => [...prev, ...result.templates]);
+      setCurrentOffset(newOffset);
+      setHasMore(result.hasMore);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load more templates');
+    } finally {
+      setSearchLoading(false);
+    }
+  };
 
   const handleTemplateClick = (template: Template) => {
     // Track template view
@@ -289,11 +320,11 @@ export default function TemplateBrowser() {
               <div className="mt-4 pt-4 border-t">
                 <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="min-rating-select" className="block text-sm font-medium text-gray-700 mb-2">
                       Minimum Rating
                     </label>
                     <Select value={minRating.toString()} onValueChange={(value) => setMinRating(Number(value))}>
-                      <SelectTrigger>
+                      <SelectTrigger id="min-rating-select">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -489,14 +520,12 @@ export default function TemplateBrowser() {
         {/* Load More */}
         {hasMore && templates.length > 0 && (
           <div className="text-center mt-12">
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                // Implement load more functionality
-              }}
+            <Button
+              variant="outline"
+              onClick={handleLoadMore}
               disabled={searchLoading}
             >
-              Load More Templates
+              {searchLoading ? 'Loading...' : 'Load More Templates'}
             </Button>
           </div>
         )}

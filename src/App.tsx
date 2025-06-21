@@ -32,6 +32,10 @@ import PublicAnalysisResult from "./pages/PublicAnalysisResult";
 import TemplateBrowser from "./pages/TemplateBrowser";
 import TemplatePreview from "./pages/TemplatePreview";
 import TemplateCustomize from "./pages/TemplateCustomize";
+import TemplateVersionManagement from "./pages/TemplateVersionManagement";
+import TemplateAnalytics from "./pages/dashboard/TemplateAnalytics";
+import SearchHistory from "./pages/dashboard/SearchHistory";
+import PdfAnnotationsDemo from "./pages/PdfAnnotationsDemo";
 import NotFound from "./pages/NotFound";
 import { ROUTES } from "@/lib/config/constants";
 
@@ -62,6 +66,8 @@ const App = () => (
             <Route path="/dashboard/templates" element={<Templates />} />
             <Route path="/dashboard/law-firms" element={<DashboardLawFirms />} />
             <Route path="/dashboard/admin" element={<Admin />} />
+            <Route path="/dashboard/template-analytics" element={<TemplateAnalytics />} />
+            <Route path="/dashboard/search-history" element={<SearchHistory />} />
             <Route path="/dashboard/subscription" element={<Subscription />} />
             <Route path="/dashboard/settings" element={<Settings />} />
             <Route path="/subscribe/:tier" element={<Subscribe />} />
@@ -75,6 +81,9 @@ const App = () => (
             <Route path={ROUTES.templateMarketplace} element={<TemplateBrowser />} />
             <Route path={`${ROUTES.templatePreview}/:slug`} element={<TemplatePreview />} />
             <Route path={`${ROUTES.templateCustomize}/:slug`} element={<TemplateCustomize />} />
+            <Route path={`/templates/:slug/versions`} element={<TemplateVersionManagement />} />
+            {/* PDF Annotations Demo Route */}
+            <Route path="/pdf-annotations-demo" element={<PdfAnnotationsDemo />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

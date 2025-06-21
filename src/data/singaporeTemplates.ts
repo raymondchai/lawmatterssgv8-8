@@ -440,6 +440,139 @@ export const singaporeTemplates: Partial<Template>[] = [
       }
     ] as TemplateField[],
     isFeatured: false
+  },
+
+  // Additional Singapore-specific templates
+  {
+    title: 'Service Agreement Template',
+    slug: 'service-agreement-template',
+    description: 'Professional service agreement template for Singapore businesses and freelancers.',
+    categoryId: 'business',
+    subcategory: 'commercial',
+    accessLevel: 'public',
+    priceSgd: 0,
+    jurisdiction: 'Singapore',
+    legalAreas: ['Contract Law', 'Service Law'],
+    complianceTags: ['Contract Law', 'GST Act'],
+    tags: ['service', 'agreement', 'freelance', 'singapore'],
+    fields: [
+      {
+        id: 'service_provider',
+        name: 'service_provider',
+        label: 'Service Provider Name',
+        type: 'text',
+        required: true,
+        placeholder: 'Company or individual providing services'
+      },
+      {
+        id: 'client_name',
+        name: 'client_name',
+        label: 'Client Name',
+        type: 'text',
+        required: true,
+        placeholder: 'Client company or individual'
+      },
+      {
+        id: 'service_description',
+        name: 'service_description',
+        label: 'Service Description',
+        type: 'textarea',
+        required: true,
+        placeholder: 'Detailed description of services to be provided',
+        validation: { minLength: 50, maxLength: 1000 }
+      },
+      {
+        id: 'service_fee',
+        name: 'service_fee',
+        label: 'Service Fee (SGD)',
+        type: 'number',
+        required: true,
+        placeholder: '5000',
+        validation: { min: 100, max: 100000 }
+      },
+      {
+        id: 'payment_terms',
+        name: 'payment_terms',
+        label: 'Payment Terms',
+        type: 'select',
+        required: true,
+        options: [
+          { label: 'Payment upon completion', value: 'completion' },
+          { label: '50% upfront, 50% on completion', value: '50_50' },
+          { label: 'Monthly payments', value: 'monthly' },
+          { label: 'Custom terms', value: 'custom' }
+        ],
+        defaultValue: 'completion'
+      },
+      {
+        id: 'project_duration',
+        name: 'project_duration',
+        label: 'Project Duration',
+        type: 'text',
+        required: true,
+        placeholder: '3 months',
+        helpText: 'Expected duration to complete the services'
+      }
+    ] as TemplateField[],
+    isFeatured: false
+  },
+
+  {
+    title: 'Employment Termination Letter',
+    slug: 'employment-termination-letter',
+    description: 'Formal employment termination letter template compliant with Singapore Employment Act.',
+    categoryId: 'employment',
+    subcategory: 'termination',
+    accessLevel: 'public',
+    priceSgd: 0,
+    jurisdiction: 'Singapore',
+    legalAreas: ['Employment Law', 'Labour Law'],
+    complianceTags: ['Employment Act', 'MOM Guidelines', 'Retrenchment Benefits'],
+    tags: ['termination', 'employment', 'notice', 'singapore'],
+    fields: [
+      commonFields.companyName,
+      commonFields.employeeName,
+      {
+        id: 'termination_reason',
+        name: 'termination_reason',
+        label: 'Reason for Termination',
+        type: 'select',
+        required: true,
+        options: [
+          { label: 'Resignation by employee', value: 'resignation' },
+          { label: 'End of contract', value: 'contract_end' },
+          { label: 'Redundancy', value: 'redundancy' },
+          { label: 'Performance issues', value: 'performance' },
+          { label: 'Misconduct', value: 'misconduct' }
+        ]
+      },
+      {
+        id: 'last_working_day',
+        name: 'last_working_day',
+        label: 'Last Working Day',
+        type: 'date',
+        required: true
+      },
+      {
+        id: 'notice_period',
+        name: 'notice_period',
+        label: 'Notice Period Given',
+        type: 'text',
+        required: true,
+        placeholder: '1 month',
+        helpText: 'Notice period as per employment contract'
+      },
+      {
+        id: 'final_pay_details',
+        name: 'final_pay_details',
+        label: 'Final Pay Details',
+        type: 'textarea',
+        required: true,
+        placeholder: 'Details of final salary, unused leave, etc.',
+        helpText: 'Include salary, unused annual leave, and other entitlements'
+      }
+    ] as TemplateField[],
+    isFeatured: false
   }
 ];
 
