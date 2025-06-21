@@ -417,6 +417,44 @@ class TemplateMarketplaceService {
   }
 
   /**
+   * Get template ratings and reviews
+   */
+  async getTemplateRatings(templateId: string): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('template_ratings')
+      .select(`
+        *,
+        user:profiles(id, email, first_name, last_name, avatar_url)
+      `)
+      .eq('template_id', templateId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      throw new Error(`Failed to fetch template ratings: ${error.message}`);
+    }
+
+    return data || [];
+  }
+
+  /**
+   * Get user's rating for a specific template
+   */
+  async getUserTemplateRating(templateId: string, userId: string): Promise<any | null> {
+    const { data, error } = await supabase
+      .from('template_ratings')
+      .select('*')
+      .eq('template_id', templateId)
+      .eq('user_id', userId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      throw new Error(`Failed to fetch user rating: ${error.message}`);
+    }
+
+    return data;
+  }
+
+  /**
    * Track template analytics event
    */
   async trackEvent(

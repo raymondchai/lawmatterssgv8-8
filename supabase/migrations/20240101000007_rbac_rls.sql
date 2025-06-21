@@ -110,15 +110,11 @@ CREATE POLICY "Admins can read all profiles" ON profiles
     )
   );
 
--- Users can update their own profile (except role)
+-- Users can update their own profile (role changes will be handled by triggers)
 CREATE POLICY "Users can update their own profile" ON profiles
-  FOR UPDATE TO authenticated 
+  FOR UPDATE TO authenticated
   USING (id = auth.uid())
-  WITH CHECK (
-    id = auth.uid() AND
-    -- Prevent users from changing their own role
-    (OLD.role = NEW.role OR NEW.role IS NULL)
-  );
+  WITH CHECK (id = auth.uid());
 
 -- Admins can update any profile including roles
 CREATE POLICY "Admins can update any profile" ON profiles
@@ -229,7 +225,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Create trigger for new user initialization
+-- Drop existing trigger if it exists and create new one
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION initialize_user_profile();

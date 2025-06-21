@@ -203,6 +203,11 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Add unique constraint for usage tracking to prevent duplicates
-ALTER TABLE usage_tracking 
-ADD CONSTRAINT unique_daily_usage 
-UNIQUE (user_id, resource_type, usage_date, COALESCE(resource_id, '00000000-0000-0000-0000-000000000000'::UUID));
+-- Note: We'll use a partial unique index instead since COALESCE can't be used in UNIQUE constraints
+CREATE UNIQUE INDEX unique_daily_usage_with_resource
+ON usage_tracking (user_id, resource_type, usage_date, resource_id)
+WHERE resource_id IS NOT NULL;
+
+CREATE UNIQUE INDEX unique_daily_usage_without_resource
+ON usage_tracking (user_id, resource_type, usage_date)
+WHERE resource_id IS NULL;

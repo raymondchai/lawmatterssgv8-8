@@ -29,7 +29,7 @@ import {
 } from 'lucide-react';
 
 export default function TemplateCustomize() {
-  const { templateSlug } = useParams<{ templateSlug: string }>();
+  const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   
   const [template, setTemplate] = useState<Template | null>(null);
@@ -44,10 +44,10 @@ export default function TemplateCustomize() {
   const [generatedPreview, setGeneratedPreview] = useState<string>('');
 
   useEffect(() => {
-    if (templateSlug) {
-      loadTemplate(templateSlug);
+    if (slug) {
+      loadTemplate(slug);
     }
-  }, [templateSlug]);
+  }, [slug]);
 
   const loadTemplate = async (slug: string) => {
     try {

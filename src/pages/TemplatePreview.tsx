@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { templateMarketplaceService, type Template } from '@/lib/services/templateMarketplace';
+import { TemplateRating } from '@/components/templates/TemplateRating';
 import { ROUTES } from '@/lib/config/constants';
 import { 
   Star, 
@@ -28,7 +29,7 @@ import {
 } from 'lucide-react';
 
 export default function TemplatePreview() {
-  const { templateSlug } = useParams<{ templateSlug: string }>();
+  const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   
   const [template, setTemplate] = useState<Template | null>(null);
@@ -38,10 +39,10 @@ export default function TemplatePreview() {
   const [isFavorited, setIsFavorited] = useState(false);
 
   useEffect(() => {
-    if (templateSlug) {
-      loadTemplate(templateSlug);
+    if (slug) {
+      loadTemplate(slug);
     }
-  }, [templateSlug]);
+  }, [slug]);
 
   const loadTemplate = async (slug: string) => {
     try {
@@ -250,7 +251,7 @@ export default function TemplatePreview() {
 
               {/* Tabs */}
               <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className="grid w-full grid-cols-3">
+                <TabsList className="grid w-full grid-cols-4">
                   <TabsTrigger value="preview">
                     <Eye className="h-4 w-4 mr-2" />
                     Preview
@@ -262,6 +263,10 @@ export default function TemplatePreview() {
                   <TabsTrigger value="details">
                     <FileText className="h-4 w-4 mr-2" />
                     Details
+                  </TabsTrigger>
+                  <TabsTrigger value="reviews">
+                    <Star className="h-4 w-4 mr-2" />
+                    Reviews
                   </TabsTrigger>
                 </TabsList>
 
@@ -413,6 +418,10 @@ export default function TemplatePreview() {
                       </CardContent>
                     </Card>
                   </div>
+                </TabsContent>
+
+                <TabsContent value="reviews" className="mt-6">
+                  <TemplateRating template={template} />
                 </TabsContent>
               </Tabs>
             </div>

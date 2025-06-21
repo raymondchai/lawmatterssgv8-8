@@ -302,9 +302,4 @@ backend = "postgres"
 
 # Experimental features may be deprecated any time
 [experimental]
-# Configures Postgres storage-engine with S3 as the data layer
-s3_host = "localhost"
-s3_port = 54329
-s3_access_key_id = "625729a08b95bf1b7ff351a663f3a23c"
-s3_secret_access_key = "850181e4652dd023b7a98c58ae0ce8e95d4ac50d5721523b0a6f536e5a0c5aaf"
-s3_region = "local"
+# Experimental features can be enabled here

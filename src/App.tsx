@@ -29,6 +29,9 @@ import PaymentFailure from "./pages/payment/PaymentFailure";
 import SharedDocument from "./pages/SharedDocument";
 import PublicAnalysis from "./pages/PublicAnalysis";
 import PublicAnalysisResult from "./pages/PublicAnalysisResult";
+import TemplateBrowser from "./pages/TemplateBrowser";
+import TemplatePreview from "./pages/TemplatePreview";
+import TemplateCustomize from "./pages/TemplateCustomize";
 import NotFound from "./pages/NotFound";
 import { ROUTES } from "@/lib/config/constants";
 
@@ -67,6 +70,11 @@ const App = () => (
             <Route path="/shared/:shareToken" element={<SharedDocument />} />
             <Route path={ROUTES.publicAnalysis} element={<PublicAnalysis />} />
             <Route path={`${ROUTES.publicAnalysisResult}/:analysisId`} element={<PublicAnalysisResult />} />
+            {/* Template Marketplace Routes */}
+            <Route path={ROUTES.templateBrowser} element={<TemplateBrowser />} />
+            <Route path={ROUTES.templateMarketplace} element={<TemplateBrowser />} />
+            <Route path={`${ROUTES.templatePreview}/:slug`} element={<TemplatePreview />} />
+            <Route path={`${ROUTES.templateCustomize}/:slug`} element={<TemplateCustomize />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
