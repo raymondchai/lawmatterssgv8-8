@@ -1,5 +1,12 @@
 import { supabase } from '@/lib/supabase';
-import type { LawFirm, LawFirmReview, LawFirmReviewVote } from '@/types';
+import type {
+  LawFirm,
+  LawFirmReview,
+  LawFirmReviewVote,
+  LawFirmTeamMember,
+  LawFirmGalleryImage,
+  LawFirmBooking
+} from '@/types';
 
 export interface LawFirmFilters {
   practiceAreas?: string[];
@@ -299,6 +306,261 @@ export const lawFirmsApi = {
   // Search law firms
   async searchLawFirms(query: string, filters: LawFirmFilters = {}): Promise<LawFirm[]> {
     return this.getLawFirms({ ...filters, search: query });
+  },
+
+  // Enhanced Law Firm Profile Functions
+
+  // Get law firm with full profile details
+  async getLawFirmProfile(id: string): Promise<LawFirm & {
+    team_members?: LawFirmTeamMember[];
+    gallery?: LawFirmGalleryImage[];
+    recent_reviews?: LawFirmReview[];
+  }> {
+    const { data: firm, error } = await supabase
+      .from('law_firms')
+      .select('*')
+      .eq('id', id)
+      .eq('verified', true)
+      .single();
+
+    if (error) {
+      console.error('Error fetching law firm profile:', error);
+      throw new Error('Failed to fetch law firm profile');
+    }
+
+    // Get team members
+    const { data: teamMembers } = await supabase
+      .from('law_firm_team_members')
+      .select('*')
+      .eq('law_firm_id', id)
+      .eq('is_active', true)
+      .order('order_index');
+
+    // Get gallery images
+    const { data: gallery } = await supabase
+      .from('law_firm_gallery')
+      .select('*')
+      .eq('law_firm_id', id)
+      .order('order_index');
+
+    // Get recent reviews
+    const { data: reviews } = await supabase
+      .from('law_firm_reviews')
+      .select(`
+        *,
+        user:profiles(full_name, avatar_url)
+      `)
+      .eq('law_firm_id', id)
+      .eq('status', 'approved')
+      .order('created_at', { ascending: false })
+      .limit(5);
+
+    return {
+      ...firm,
+      team_members: teamMembers || [],
+      gallery: gallery || [],
+      recent_reviews: reviews || []
+    };
+  },
+
+  // Team Member Management
+  async getTeamMembers(lawFirmId: string): Promise<LawFirmTeamMember[]> {
+    const { data, error } = await supabase
+      .from('law_firm_team_members')
+      .select('*')
+      .eq('law_firm_id', lawFirmId)
+      .eq('is_active', true)
+      .order('order_index');
+
+    if (error) {
+      console.error('Error fetching team members:', error);
+      throw new Error('Failed to fetch team members');
+    }
+
+    return data || [];
+  },
+
+  async createTeamMember(teamMemberData: Omit<LawFirmTeamMember, 'id' | 'created_at' | 'updated_at'>): Promise<LawFirmTeamMember> {
+    const { data, error } = await supabase
+      .from('law_firm_team_members')
+      .insert(teamMemberData)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating team member:', error);
+      throw new Error('Failed to create team member');
+    }
+
+    return data;
+  },
+
+  async updateTeamMember(id: string, updates: Partial<LawFirmTeamMember>): Promise<LawFirmTeamMember> {
+    const { data, error } = await supabase
+      .from('law_firm_team_members')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating team member:', error);
+      throw new Error('Failed to update team member');
+    }
+
+    return data;
+  },
+
+  async deleteTeamMember(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('law_firm_team_members')
+      .update({ is_active: false })
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting team member:', error);
+      throw new Error('Failed to delete team member');
+    }
+  },
+
+  // Gallery Management
+  async getGalleryImages(lawFirmId: string): Promise<LawFirmGalleryImage[]> {
+    const { data, error } = await supabase
+      .from('law_firm_gallery')
+      .select('*')
+      .eq('law_firm_id', lawFirmId)
+      .order('order_index');
+
+    if (error) {
+      console.error('Error fetching gallery images:', error);
+      throw new Error('Failed to fetch gallery images');
+    }
+
+    return data || [];
+  },
+
+  async addGalleryImage(imageData: Omit<LawFirmGalleryImage, 'id' | 'created_at'>): Promise<LawFirmGalleryImage> {
+    const { data, error } = await supabase
+      .from('law_firm_gallery')
+      .insert(imageData)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error adding gallery image:', error);
+      throw new Error('Failed to add gallery image');
+    }
+
+    return data;
+  },
+
+  async updateGalleryImage(id: string, updates: Partial<LawFirmGalleryImage>): Promise<LawFirmGalleryImage> {
+    const { data, error } = await supabase
+      .from('law_firm_gallery')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating gallery image:', error);
+      throw new Error('Failed to update gallery image');
+    }
+
+    return data;
+  },
+
+  async deleteGalleryImage(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('law_firm_gallery')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting gallery image:', error);
+      throw new Error('Failed to delete gallery image');
+    }
+  },
+
+  // Booking Management
+  async createBooking(bookingData: Omit<LawFirmBooking, 'id' | 'created_at' | 'updated_at' | 'user' | 'team_member'>): Promise<LawFirmBooking> {
+    const { data, error } = await supabase
+      .from('law_firm_bookings')
+      .insert(bookingData)
+      .select(`
+        *,
+        user:profiles(full_name, email, phone),
+        team_member:law_firm_team_members(*)
+      `)
+      .single();
+
+    if (error) {
+      console.error('Error creating booking:', error);
+      throw new Error('Failed to create booking');
+    }
+
+    return data;
+  },
+
+  async getUserBookings(userId: string): Promise<LawFirmBooking[]> {
+    const { data, error } = await supabase
+      .from('law_firm_bookings')
+      .select(`
+        *,
+        law_firm:law_firms(name, phone, email),
+        team_member:law_firm_team_members(name, title, email, phone)
+      `)
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching user bookings:', error);
+      throw new Error('Failed to fetch user bookings');
+    }
+
+    return data || [];
+  },
+
+  async getLawFirmBookings(lawFirmId: string): Promise<LawFirmBooking[]> {
+    const { data, error } = await supabase
+      .from('law_firm_bookings')
+      .select(`
+        *,
+        user:profiles(full_name, email, phone),
+        team_member:law_firm_team_members(name, title)
+      `)
+      .eq('law_firm_id', lawFirmId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching law firm bookings:', error);
+      throw new Error('Failed to fetch law firm bookings');
+    }
+
+    return data || [];
+  },
+
+  async updateBookingStatus(id: string, status: LawFirmBooking['status'], notes?: string): Promise<LawFirmBooking> {
+    const updates: any = { status };
+    if (notes) updates.notes = notes;
+
+    const { data, error } = await supabase
+      .from('law_firm_bookings')
+      .update(updates)
+      .eq('id', id)
+      .select(`
+        *,
+        user:profiles(full_name, email, phone),
+        team_member:law_firm_team_members(name, title)
+      `)
+      .single();
+
+    if (error) {
+      console.error('Error updating booking status:', error);
+      throw new Error('Failed to update booking status');
+    }
+
+    return data;
   },
 
   // Get top-rated law firms

@@ -152,6 +152,7 @@ export const PERMISSIONS = {
   TEMPLATES_UPDATE: 'templates.update',
   TEMPLATES_DELETE: 'templates.delete',
   TEMPLATES_MODERATE: 'templates.moderate',
+  TEMPLATES_MANAGE: 'templates.manage',
 
   // Law Firms
   LAW_FIRMS_CREATE: 'law_firms.create',

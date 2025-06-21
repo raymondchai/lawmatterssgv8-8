@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, Phone, Mail, User } from "lucide-react";
+import { Menu, User, Building2, FileText, MessageSquare } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 export const Navigation = () => {
@@ -13,10 +13,11 @@ export const Navigation = () => {
 
   const navItems = [
     { name: "Home", href: "/" },
+    { name: "Free Analysis", href: "/analyze", icon: FileText, highlight: true },
+    { name: "Law Firms", href: "/law-firms", icon: Building2 },
+    { name: "Documents", href: "/documents", icon: FileText },
+    { name: "Legal Q&A", href: "/legal-qa", icon: MessageSquare },
     { name: "Pricing", href: "/pricing" },
-    { name: "Practice Areas", href: "#practice-areas" },
-    { name: "About", href: "#about" },
-    { name: "Contact", href: "#contact" },
   ];
 
   return (
@@ -26,7 +27,7 @@ export const Navigation = () => {
           {/* Logo */}
           <div className="flex-shrink-0">
             <Link to="/" className="text-2xl font-bold text-blue-900 hover:text-blue-800 transition-colors">
-              LawMattersSG
+              LegalHelpSG
             </Link>
           </div>
 
@@ -34,33 +35,24 @@ export const Navigation = () => {
           <div className="hidden md:block">
             <div className="ml-10 flex items-baseline space-x-4">
               {navItems.map((item) => (
-                item.href.startsWith('#') ? (
-                  <a
-                    key={item.name}
-                    href={item.href}
-                    className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
-                  >
-                    {item.name}
-                  </a>
-                ) : (
-                  <Link
-                    key={item.name}
-                    to={item.href}
-                    className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
-                  >
-                    {item.name}
-                  </Link>
-                )
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-1 ${
+                    item.highlight
+                      ? "bg-blue-600 text-white hover:bg-blue-700"
+                      : "text-gray-700 hover:text-blue-600"
+                  }`}
+                >
+                  {item.icon && <item.icon className="h-4 w-4" />}
+                  <span>{item.name}</span>
+                </Link>
               ))}
             </div>
           </div>
 
-          {/* Contact Info & CTA */}
+          {/* CTA Buttons */}
           <div className="hidden lg:flex items-center space-x-4">
-            <div className="flex items-center space-x-2 text-sm text-gray-600">
-              <Phone className="h-4 w-4" />
-              <span>+65 6123 4567</span>
-            </div>
             {user ? (
               <Button
                 onClick={() => navigate('/dashboard')}
@@ -98,35 +90,21 @@ export const Navigation = () => {
               <SheetContent side="right" className="w-[300px] sm:w-[400px]">
                 <div className="flex flex-col space-y-4 mt-8">
                   {navItems.map((item) => (
-                    item.href.startsWith('#') ? (
-                      <a
-                        key={item.name}
-                        href={item.href}
-                        className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-lg font-medium transition-colors"
-                        onClick={() => setIsOpen(false)}
-                      >
-                        {item.name}
-                      </a>
-                    ) : (
-                      <Link
-                        key={item.name}
-                        to={item.href}
-                        className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-lg font-medium transition-colors"
-                        onClick={() => setIsOpen(false)}
-                      >
-                        {item.name}
-                      </Link>
-                    )
+                    <Link
+                      key={item.name}
+                      to={item.href}
+                      className={`px-3 py-2 rounded-md text-lg font-medium transition-colors flex items-center space-x-2 ${
+                        item.highlight
+                          ? "bg-blue-600 text-white hover:bg-blue-700"
+                          : "text-gray-700 hover:text-blue-600"
+                      }`}
+                      onClick={() => setIsOpen(false)}
+                    >
+                      {item.icon && <item.icon className="h-5 w-5" />}
+                      <span>{item.name}</span>
+                    </Link>
                   ))}
                   <div className="border-t pt-4 mt-4">
-                    <div className="flex items-center space-x-2 text-gray-600 px-3 py-2">
-                      <Phone className="h-4 w-4" />
-                      <span>+65 6123 4567</span>
-                    </div>
-                    <div className="flex items-center space-x-2 text-gray-600 px-3 py-2">
-                      <Mail className="h-4 w-4" />
-                      <span>info@lawmatters.sg</span>
-                    </div>
                     {user ? (
                       <Button
                         onClick={() => {

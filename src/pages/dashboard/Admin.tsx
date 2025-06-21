@@ -19,6 +19,7 @@ import { UserManagement } from '@/components/admin/UserManagement';
 import { ContentModeration } from '@/components/admin/ContentModeration';
 import { SystemMonitoring } from '@/components/admin/SystemMonitoring';
 import { AdminLawFirmManager } from '@/components/lawfirms/AdminLawFirmManager';
+import { TemplateManagement } from '@/components/admin/TemplateManagement';
 import { usePermissions, useRoleAccess, PERMISSIONS } from '@/hooks/usePermissions';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -111,6 +112,13 @@ const Admin: React.FC = () => {
       icon: Database,
       action: () => setActiveTab('lawfirms'),
       permission: PERMISSIONS.LAW_FIRMS_VERIFY
+    },
+    {
+      title: 'Template Management',
+      description: 'Manage legal document templates',
+      icon: FileText,
+      action: () => setActiveTab('templates'),
+      permission: PERMISSIONS.TEMPLATES_MANAGE
     }
   ];
 
@@ -119,6 +127,7 @@ const Admin: React.FC = () => {
     { id: 'users', label: 'Users', icon: Users, permission: PERMISSIONS.USERS_READ },
     { id: 'moderation', label: 'Moderation', icon: Flag, permission: PERMISSIONS.LAW_FIRMS_MODERATE_REVIEWS },
     { id: 'lawfirms', label: 'Law Firms', icon: Database, permission: PERMISSIONS.LAW_FIRMS_VERIFY },
+    { id: 'templates', label: 'Templates', icon: FileText, permission: PERMISSIONS.TEMPLATES_MANAGE },
     { id: 'monitoring', label: 'Monitoring', icon: Activity, permission: PERMISSIONS.SYSTEM_MONITORING }
   ].filter(tab => !tab.permission || hasPermission(tab.permission));
 
@@ -143,7 +152,7 @@ const Admin: React.FC = () => {
 
         {/* Admin Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             {availableTabs.map((tab) => (
               <TabsTrigger key={tab.id} value={tab.id} className="flex items-center space-x-2">
                 <tab.icon className="h-4 w-4" />
@@ -320,6 +329,12 @@ const Admin: React.FC = () => {
           {hasPermission(PERMISSIONS.LAW_FIRMS_VERIFY) && (
             <TabsContent value="lawfirms">
               <AdminLawFirmManager />
+            </TabsContent>
+          )}
+
+          {hasPermission(PERMISSIONS.TEMPLATES_MANAGE) && (
+            <TabsContent value="templates">
+              <TemplateManagement />
             </TabsContent>
           )}
 

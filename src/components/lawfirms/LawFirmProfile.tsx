@@ -1,30 +1,42 @@
 import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { 
-  MapPin, 
-  Phone, 
-  Mail, 
-  Globe, 
-  Star, 
-  Verified,
-  Users,
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  MapPin,
+  Phone,
+  Mail,
+  Globe,
+  Star,
   Calendar,
-  MessageSquare,
-  ThumbsUp,
+  Clock,
+  Users,
+  Award,
+  GraduationCap,
+  Languages,
+  DollarSign,
+  Verified,
   ArrowLeft,
+  MessageSquare,
+  Heart,
+  Share2,
+  ThumbsUp,
   ExternalLink
 } from 'lucide-react';
 import { lawFirmsApi } from '@/lib/api/lawFirms';
-import type { LawFirm, LawFirmReview } from '@/types';
+import type { LawFirm, LawFirmTeamMember, LawFirmGalleryImage, LawFirmReview } from '@/types';
 import { toast } from '@/components/ui/sonner';
 import { formatDistanceToNow } from 'date-fns';
+import { LawFirmReviews } from './LawFirmReviews';
+import { LawFirmBookingForm } from './LawFirmBookingForm';
+import { LawFirmGallery } from './LawFirmGallery';
+import { LawFirmContactForm } from './LawFirmContactForm';
 
 interface LawFirmProfileProps {
-  firmId: string;
+  firmId?: string;
   onBack?: () => void;
   className?: string;
 }
@@ -34,34 +46,40 @@ export const LawFirmProfile: React.FC<LawFirmProfileProps> = ({
   onBack,
   className = ''
 }) => {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const profileId = firmId || id;
+
   const [firm, setFirm] = useState<LawFirm | null>(null);
+  const [teamMembers, setTeamMembers] = useState<LawFirmTeamMember[]>([]);
+  const [gallery, setGallery] = useState<LawFirmGalleryImage[]>([]);
   const [reviews, setReviews] = useState<LawFirmReview[]>([]);
   const [loading, setLoading] = useState(true);
-  const [reviewsLoading, setReviewsLoading] = useState(true);
+  const [showBookingForm, setShowBookingForm] = useState(false);
+  const [showContactForm, setShowContactForm] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
 
   useEffect(() => {
-    loadFirmData();
-  }, [firmId]);
+    if (profileId) {
+      loadLawFirmProfile();
+    }
+  }, [profileId]);
 
-  const loadFirmData = async () => {
+  const loadLawFirmProfile = async () => {
+    if (!profileId) return;
+
     try {
       setLoading(true);
-      setReviewsLoading(true);
-      
-      const [firmData, reviewsData] = await Promise.all([
-        lawFirmsApi.getLawFirm(firmId),
-        lawFirmsApi.getLawFirmReviews(firmId)
-      ]);
-      
-      setFirm(firmData);
-      setReviews(reviewsData);
+      const profileData = await lawFirmsApi.getLawFirmProfile(profileId);
+      setFirm(profileData);
+      setTeamMembers(profileData.team_members || []);
+      setGallery(profileData.gallery || []);
+      setReviews(profileData.recent_reviews || []);
     } catch (error: any) {
-      console.error('Error loading firm data:', error);
-      toast.error('Failed to load law firm information');
+      console.error('Error loading law firm profile:', error);
+      toast.error('Failed to load law firm profile');
     } finally {
       setLoading(false);
-      setReviewsLoading(false);
     }
   };
 
@@ -95,20 +113,38 @@ export const LawFirmProfile: React.FC<LawFirmProfileProps> = ({
     return distribution;
   };
 
-  if (loading || !firm) {
+  const formatOfficeHours = (hours: any) => {
+    if (!hours) return 'Hours not specified';
+
+    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+    return days.map((day, index) => (
+      hours[day] ? `${dayNames[index]}: ${hours[day]}` : null
+    )).filter(Boolean).join(', ') || 'Hours not specified';
+  };
+
+  if (loading) {
     return (
-      <div className={`space-y-6 ${className}`}>
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/3 mb-4"></div>
-          <div className="h-4 bg-gray-200 rounded w-1/2 mb-6"></div>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 space-y-4">
-              <div className="h-64 bg-gray-200 rounded"></div>
-            </div>
-            <div className="space-y-4">
-              <div className="h-32 bg-gray-200 rounded"></div>
-            </div>
-          </div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading law firm profile...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!firm) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Law Firm Not Found</h2>
+          <p className="text-gray-600 mb-4">The law firm you're looking for doesn't exist or has been removed.</p>
+          <Button onClick={() => navigate('/law-firms')}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Directory
+          </Button>
         </div>
       </div>
     );
@@ -118,318 +154,444 @@ export const LawFirmProfile: React.FC<LawFirmProfileProps> = ({
   const totalReviews = reviews.length;
 
   return (
-    <div className={`space-y-6 ${className}`}>
-      {/* Header */}
-      <div className="flex items-center space-x-4">
-        {onBack && (
-          <Button variant="outline" size="sm" onClick={onBack}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header with cover image */}
+      <div className="relative h-64 bg-gradient-to-r from-blue-600 to-blue-800">
+        {firm.cover_image_url && (
+          <img
+            src={firm.cover_image_url}
+            alt={`${firm.name} cover`}
+            className="w-full h-full object-cover"
+          />
         )}
-        <div className="flex-1">
-          <div className="flex items-center space-x-3">
-            <h1 className="text-3xl font-bold text-gray-900">{firm.name}</h1>
-            {firm.verified && (
-              <Verified className="h-6 w-6 text-blue-500" />
-            )}
-          </div>
-          <div className="flex items-center space-x-4 mt-2">
-            <div className="flex items-center space-x-1">
-              {renderStars(firm.rating)}
-              <span className="text-lg font-medium text-gray-900 ml-2">
-                {firm.rating.toFixed(1)}
-              </span>
-              <span className="text-gray-500">
-                ({totalReviews} review{totalReviews !== 1 ? 's' : ''})
-              </span>
-            </div>
-          </div>
+        <div className="absolute inset-0 bg-black bg-opacity-40" />
+
+        {/* Navigation */}
+        <div className="absolute top-4 left-4">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => onBack ? onBack() : navigate('/law-firms')}
+            className="bg-white/90 hover:bg-white"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Directory
+          </Button>
+        </div>
+
+        {/* Actions */}
+        <div className="absolute top-4 right-4 flex space-x-2">
+          <Button variant="secondary" size="sm" className="bg-white/90 hover:bg-white">
+            <Heart className="h-4 w-4" />
+          </Button>
+          <Button variant="secondary" size="sm" className="bg-white/90 hover:bg-white">
+            <Share2 className="h-4 w-4" />
+          </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Content */}
-        <div className="lg:col-span-2">
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="reviews">Reviews ({totalReviews})</TabsTrigger>
-              <TabsTrigger value="contact">Contact</TabsTrigger>
-            </TabsList>
+      {/* Firm info header */}
+      <div className="relative -mt-16 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <Card className="bg-white shadow-lg">
+          <CardContent className="p-6">
+            <div className="flex flex-col md:flex-row md:items-start md:space-x-6">
+              {/* Logo */}
+              <div className="flex-shrink-0 mb-4 md:mb-0">
+                <Avatar className="h-24 w-24 border-4 border-white shadow-lg">
+                  <AvatarImage src={firm.logo_url} alt={firm.name} />
+                  <AvatarFallback className="text-2xl font-bold bg-blue-600 text-white">
+                    {firm.name.charAt(0)}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
 
-            <TabsContent value="overview" className="space-y-6">
-              {/* About */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>About {firm.name}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-700 leading-relaxed">{firm.description}</p>
-                </CardContent>
-              </Card>
+              {/* Basic info */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center space-x-2 mb-2">
+                  <h1 className="text-3xl font-bold text-gray-900">{firm.name}</h1>
+                  {firm.verified && (
+                    <Verified className="h-6 w-6 text-blue-500" />
+                  )}
+                </div>
 
-              {/* Practice Areas */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Practice Areas</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-wrap gap-2">
-                    {firm.practice_areas.map((area, index) => (
-                      <Badge key={index} variant="secondary" className="text-sm">
-                        {area}
-                      </Badge>
-                    ))}
+                <div className="flex items-center space-x-1 mb-3">
+                  {renderStars(firm.rating)}
+                  <span className="text-lg font-semibold text-gray-900 ml-2">
+                    {firm.rating.toFixed(1)}
+                  </span>
+                  <span className="text-gray-600">
+                    ({firm.total_reviews || 0} reviews)
+                  </span>
+                </div>
+
+                <p className="text-gray-600 mb-4">{firm.description}</p>
+
+                {/* Quick info */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+                  <div className="flex items-center space-x-2">
+                    <MapPin className="h-4 w-4 text-gray-400" />
+                    <span className="text-gray-600">{firm.address}</span>
                   </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="reviews" className="space-y-6">
-              {/* Rating Summary */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Client Reviews</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Overall Rating */}
-                    <div className="text-center">
-                      <div className="text-4xl font-bold text-gray-900 mb-2">
-                        {firm.rating.toFixed(1)}
-                      </div>
-                      <div className="flex items-center justify-center space-x-1 mb-2">
-                        {renderStars(firm.rating)}
-                      </div>
-                      <p className="text-gray-600">
-                        Based on {totalReviews} review{totalReviews !== 1 ? 's' : ''}
-                      </p>
+                  <div className="flex items-center space-x-2">
+                    <Phone className="h-4 w-4 text-gray-400" />
+                    <span className="text-gray-600">{firm.phone}</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Mail className="h-4 w-4 text-gray-400" />
+                    <span className="text-gray-600">{firm.email}</span>
+                  </div>
+                  {firm.website && (
+                    <div className="flex items-center space-x-2">
+                      <Globe className="h-4 w-4 text-gray-400" />
+                      <a
+                        href={firm.website}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline"
+                      >
+                        Website
+                      </a>
                     </div>
+                  )}
+                </div>
+              </div>
 
-                    {/* Rating Distribution */}
-                    <div className="space-y-2">
-                      {[5, 4, 3, 2, 1].map(rating => {
-                        const count = ratingDistribution[rating as keyof typeof ratingDistribution];
-                        const percentage = totalReviews > 0 ? (count / totalReviews) * 100 : 0;
-                        
-                        return (
-                          <div key={rating} className="flex items-center space-x-2">
-                            <span className="text-sm w-8">{rating}</span>
-                            <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                            <div className="flex-1 bg-gray-200 rounded-full h-2">
-                              <div 
-                                className="bg-yellow-400 h-2 rounded-full"
-                                style={{ width: `${percentage}%` }}
-                              />
-                            </div>
-                            <span className="text-sm text-gray-600 w-8">{count}</span>
-                          </div>
-                        );
-                      })}
+              {/* Action buttons */}
+              <div className="flex flex-col space-y-2 mt-4 md:mt-0">
+                <Button
+                  onClick={() => setShowBookingForm(true)}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  <Calendar className="h-4 w-4 mr-2" />
+                  Book Consultation
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowContactForm(true)}
+                >
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  Send Message
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Main content */}
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="team">Team</TabsTrigger>
+            <TabsTrigger value="gallery">Gallery</TabsTrigger>
+            <TabsTrigger value="reviews">Reviews</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview" className="mt-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Main content */}
+              <div className="lg:col-span-2 space-y-6">
+                {/* About */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>About {firm.name}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-gray-700 leading-relaxed mb-4">{firm.description}</p>
+
+                    {/* Enhanced details */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                      {firm.established_year && (
+                        <div className="flex items-center space-x-2">
+                          <Calendar className="h-4 w-4 text-gray-400" />
+                          <span className="text-sm text-gray-600">
+                            Established: {firm.established_year}
+                          </span>
+                        </div>
+                      )}
+                      {firm.firm_size && (
+                        <div className="flex items-center space-x-2">
+                          <Users className="h-4 w-4 text-gray-400" />
+                          <span className="text-sm text-gray-600">
+                            Firm Size: {firm.firm_size.charAt(0).toUpperCase() + firm.firm_size.slice(1)}
+                          </span>
+                        </div>
+                      )}
+                      {firm.response_time && (
+                        <div className="flex items-center space-x-2">
+                          <Clock className="h-4 w-4 text-gray-400" />
+                          <span className="text-sm text-gray-600">
+                            Response Time: {firm.response_time}
+                          </span>
+                        </div>
+                      )}
+                      {firm.consultation_fee && (
+                        <div className="flex items-center space-x-2">
+                          <DollarSign className="h-4 w-4 text-gray-400" />
+                          <span className="text-sm text-gray-600">
+                            Consultation Fee: ${firm.consultation_fee}
+                          </span>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
 
-              {/* Individual Reviews */}
-              <div className="space-y-4">
-                {reviewsLoading ? (
-                  <div className="space-y-4">
-                    {[...Array(3)].map((_, i) => (
-                      <Card key={i} className="animate-pulse">
-                        <CardContent className="p-4">
-                          <div className="flex items-start space-x-3">
-                            <div className="w-10 h-10 bg-gray-200 rounded-full"></div>
-                            <div className="flex-1 space-y-2">
-                              <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-                              <div className="h-3 bg-gray-200 rounded w-full"></div>
-                              <div className="h-3 bg-gray-200 rounded w-3/4"></div>
-                            </div>
+                {/* Practice Areas */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Practice Areas</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap gap-2">
+                      {firm.practice_areas.map((area) => (
+                        <Badge key={area} variant="secondary" className="text-sm">
+                          {area}
+                        </Badge>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Languages & Certifications */}
+                {(firm.languages?.length || firm.certifications?.length) && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Languages & Certifications</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {firm.languages?.length && (
+                        <div>
+                          <div className="flex items-center space-x-2 mb-2">
+                            <Languages className="h-4 w-4 text-gray-400" />
+                            <span className="font-medium text-gray-900">Languages</span>
                           </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                ) : reviews.length > 0 ? (
-                  reviews.map((review) => (
-                    <Card key={review.id}>
-                      <CardContent className="p-4">
-                        <div className="flex items-start space-x-3">
-                          <Avatar>
-                            <AvatarFallback>
-                              {review.user ? getInitials(review.user.full_name) : 'U'}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between mb-2">
-                              <div>
-                                <h4 className="font-medium text-gray-900">
-                                  {review.user?.full_name || 'Anonymous'}
-                                </h4>
-                                <div className="flex items-center space-x-2">
-                                  <div className="flex items-center space-x-1">
-                                    {renderStars(review.rating)}
-                                  </div>
-                                  <span className="text-sm text-gray-500">
-                                    {formatDistanceToNow(new Date(review.created_at), { addSuffix: true })}
-                                  </span>
-                                  {review.verified_client && (
-                                    <Badge variant="outline" className="text-xs">
-                                      Verified Client
-                                    </Badge>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                            
-                            <h5 className="font-medium text-gray-900 mb-2">{review.title}</h5>
-                            <p className="text-gray-700 mb-3">{review.content}</p>
-                            
-                            <div className="flex items-center space-x-4">
-                              <Button variant="ghost" size="sm" className="text-gray-500">
-                                <ThumbsUp className="h-4 w-4 mr-1" />
-                                Helpful ({review.helpful_count})
-                              </Button>
-                            </div>
+                          <div className="flex flex-wrap gap-2">
+                            {firm.languages.map((language) => (
+                              <Badge key={language} variant="outline" className="text-sm">
+                                {language}
+                              </Badge>
+                            ))}
                           </div>
                         </div>
-                      </CardContent>
-                    </Card>
-                  ))
-                ) : (
+                      )}
+
+                      {firm.certifications?.length && (
+                        <div>
+                          <div className="flex items-center space-x-2 mb-2">
+                            <Award className="h-4 w-4 text-gray-400" />
+                            <span className="font-medium text-gray-900">Certifications</span>
+                          </div>
+                          <div className="space-y-1">
+                            {firm.certifications.map((cert) => (
+                              <div key={cert} className="text-sm text-gray-600">• {cert}</div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Office Hours */}
+                {firm.office_hours && (
                   <Card>
-                    <CardContent className="text-center py-8">
-                      <MessageSquare className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">No reviews yet</h3>
-                      <p className="text-gray-500">
-                        Be the first to review this law firm.
-                      </p>
+                    <CardHeader>
+                      <CardTitle>Office Hours</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-gray-700">{formatOfficeHours(firm.office_hours)}</p>
                     </CardContent>
                   </Card>
                 )}
               </div>
-            </TabsContent>
 
-            <TabsContent value="contact" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Contact Information</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center space-x-3">
-                    <MapPin className="h-5 w-5 text-gray-400" />
-                    <div>
-                      <p className="font-medium">Address</p>
-                      <p className="text-gray-600">{firm.address}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center space-x-3">
-                    <Phone className="h-5 w-5 text-gray-400" />
-                    <div>
-                      <p className="font-medium">Phone</p>
-                      <p className="text-gray-600">{firm.phone}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center space-x-3">
-                    <Mail className="h-5 w-5 text-gray-400" />
-                    <div>
-                      <p className="font-medium">Email</p>
-                      <p className="text-gray-600">{firm.email}</p>
-                    </div>
-                  </div>
-                  
-                  {firm.website && (
-                    <div className="flex items-center space-x-3">
-                      <Globe className="h-5 w-5 text-gray-400" />
-                      <div>
-                        <p className="font-medium">Website</p>
-                        <a 
-                          href={firm.website} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:text-blue-800 flex items-center space-x-1"
-                        >
-                          <span>{firm.website}</span>
-                          <ExternalLink className="h-4 w-4" />
-                        </a>
+              {/* Sidebar */}
+              <div className="space-y-6">
+                {/* Quick Stats */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Quick Stats</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600">Rating</span>
+                      <div className="flex items-center space-x-1">
+                        <Star className="h-4 w-4 text-yellow-400 fill-current" />
+                        <span className="font-medium">{firm.rating.toFixed(1)}</span>
                       </div>
                     </div>
-                  )}
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600">Reviews</span>
+                      <span className="font-medium">{totalReviews}</span>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600">Practice Areas</span>
+                      <span className="font-medium">{firm.practice_areas.length}</span>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600">Verified</span>
+                      <div className="flex items-center space-x-1">
+                        {firm.verified ? (
+                          <>
+                            <Verified className="h-4 w-4 text-blue-500" />
+                            <span className="text-blue-600 font-medium">Yes</span>
+                          </>
+                        ) : (
+                          <span className="text-gray-500">No</span>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Contact Actions */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Contact</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <Button className="w-full">
+                      <MessageSquare className="h-4 w-4 mr-2" />
+                      Write a Review
+                    </Button>
+
+                    <Button variant="outline" className="w-full">
+                      <Phone className="h-4 w-4 mr-2" />
+                      Call Now
+                    </Button>
+
+                    <Button variant="outline" className="w-full">
+                      <Mail className="h-4 w-4 mr-2" />
+                      Send Email
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="team" className="mt-6">
+            {teamMembers.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {teamMembers.map((member) => (
+                  <Card key={member.id} className="hover:shadow-lg transition-shadow">
+                    <CardContent className="p-6">
+                      <div className="text-center">
+                        <Avatar className="h-20 w-20 mx-auto mb-4">
+                          <AvatarImage src={member.photo_url} alt={member.name} />
+                          <AvatarFallback className="text-lg bg-blue-100 text-blue-600">
+                            {member.name.split(' ').map(n => n[0]).join('')}
+                          </AvatarFallback>
+                        </Avatar>
+
+                        <h3 className="text-lg font-semibold text-gray-900 mb-1">{member.name}</h3>
+                        <p className="text-blue-600 font-medium mb-3">{member.title}</p>
+
+                        {member.bio && (
+                          <p className="text-gray-600 text-sm mb-4">{member.bio}</p>
+                        )}
+
+                        {/* Practice Areas */}
+                        {member.practice_areas.length > 0 && (
+                          <div className="mb-4">
+                            <div className="flex flex-wrap gap-1 justify-center">
+                              {member.practice_areas.slice(0, 3).map((area) => (
+                                <Badge key={area} variant="secondary" className="text-xs">
+                                  {area}
+                                </Badge>
+                              ))}
+                              {member.practice_areas.length > 3 && (
+                                <Badge variant="secondary" className="text-xs">
+                                  +{member.practice_areas.length - 3} more
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Experience & Education */}
+                        <div className="space-y-2 text-sm text-gray-600">
+                          {member.years_experience && (
+                            <div className="flex items-center justify-center space-x-1">
+                              <GraduationCap className="h-4 w-4" />
+                              <span>{member.years_experience} years experience</span>
+                            </div>
+                          )}
+
+                          {member.languages && member.languages.length > 0 && (
+                            <div className="flex items-center justify-center space-x-1">
+                              <Languages className="h-4 w-4" />
+                              <span>{member.languages.join(', ')}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Contact */}
+                        <div className="mt-4 space-y-2">
+                          {member.email && (
+                            <Button variant="outline" size="sm" className="w-full">
+                              <Mail className="h-4 w-4 mr-2" />
+                              Contact
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="text-center py-8">
+                  <Users className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No team information available</h3>
+                  <p className="text-gray-500">
+                    Team member information has not been provided yet.
+                  </p>
                 </CardContent>
               </Card>
-            </TabsContent>
-          </Tabs>
-        </div>
+            )}
+          </TabsContent>
 
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Quick Stats */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Quick Stats</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-gray-600">Rating</span>
-                <div className="flex items-center space-x-1">
-                  <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                  <span className="font-medium">{firm.rating.toFixed(1)}</span>
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <span className="text-gray-600">Reviews</span>
-                <span className="font-medium">{totalReviews}</span>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <span className="text-gray-600">Practice Areas</span>
-                <span className="font-medium">{firm.practice_areas.length}</span>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <span className="text-gray-600">Verified</span>
-                <div className="flex items-center space-x-1">
-                  {firm.verified ? (
-                    <>
-                      <Verified className="h-4 w-4 text-blue-500" />
-                      <span className="text-blue-600 font-medium">Yes</span>
-                    </>
-                  ) : (
-                    <span className="text-gray-500">No</span>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <TabsContent value="gallery" className="mt-6">
+            <LawFirmGallery images={gallery} />
+          </TabsContent>
 
-          {/* Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <Button className="w-full">
-                <MessageSquare className="h-4 w-4 mr-2" />
-                Write a Review
-              </Button>
-              
-              <Button variant="outline" className="w-full">
-                <Phone className="h-4 w-4 mr-2" />
-                Call Now
-              </Button>
-              
-              <Button variant="outline" className="w-full">
-                <Mail className="h-4 w-4 mr-2" />
-                Send Email
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
+          <TabsContent value="reviews" className="mt-6">
+            <LawFirmReviews lawFirmId={firm.id} reviews={reviews} />
+          </TabsContent>
+        </Tabs>
       </div>
+
+      {/* Booking form modal */}
+      {showBookingForm && (
+        <LawFirmBookingForm
+          lawFirm={firm}
+          teamMembers={teamMembers}
+          onClose={() => setShowBookingForm(false)}
+          onBookingCreated={() => {
+            setShowBookingForm(false);
+            toast.success('Booking request submitted successfully!');
+          }}
+        />
+      )}
+
+      {/* Contact form modal */}
+      {showContactForm && (
+        <LawFirmContactForm
+          lawFirm={firm}
+          onClose={() => setShowContactForm(false)}
+          onMessageSent={() => {
+            setShowContactForm(false);
+            toast.success('Message sent successfully!');
+          }}
+        />
+      )}
     </div>
   );
 };

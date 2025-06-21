@@ -206,5 +206,182 @@ export const ROUTES = {
   paymentFailure: '/payment/failure',
   admin: '/admin',
   adminUsers: '/admin/users',
-  adminAnalytics: '/admin/analytics'
+  adminAnalytics: '/admin/analytics',
+  // Public Document Analysis Routes
+  publicAnalysis: '/analyze',
+  publicAnalysisResult: '/analyze/result',
+  // Template Marketplace Routes
+  templateMarketplace: '/templates',
+  templateBrowser: '/templates/browse',
+  templatePreview: '/templates/preview',
+  templateCustomize: '/templates/customize',
+  templateGenerate: '/templates/generate',
+  templateDownload: '/templates/download'
+} as const;
+
+// Public Document Analysis Configuration
+export const PUBLIC_ANALYSIS_CONFIG = {
+  // Rate limiting for public users
+  rateLimits: {
+    documentsPerHour: 3,
+    documentsPerDay: 10,
+    maxFileSize: 10 * 1024 * 1024, // 10MB
+    allowedFileTypes: ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'],
+    sessionDuration: 60 * 60 * 1000, // 1 hour in milliseconds
+  },
+
+  // Analysis features available to public users
+  features: {
+    basicOCR: true,
+    textExtraction: true,
+    documentSummary: true,
+    keywordExtraction: true,
+    documentClassification: false, // Premium feature
+    legalInsights: false, // Premium feature
+    entityExtraction: false, // Premium feature
+    complianceCheck: false, // Premium feature
+  },
+
+  // Storage configuration for public documents
+  storage: {
+    bucket: 'public-documents',
+    retentionHours: 24, // Auto-delete after 24 hours
+    maxStoragePerSession: 50 * 1024 * 1024, // 50MB per session
+  },
+
+  // Conversion prompts
+  conversionPrompts: {
+    showAfterAnalysis: true,
+    showAdvancedFeatures: true,
+    highlightPremiumBenefits: true,
+  }
+} as const;
+
+// Template Marketplace Configuration
+export const TEMPLATE_MARKETPLACE_CONFIG = {
+  // Template categories
+  categories: [
+    {
+      id: 'employment',
+      name: 'Employment',
+      description: 'Employment contracts, agreements, and HR documents',
+      icon: 'briefcase',
+      subcategories: ['contracts', 'policies', 'termination', 'benefits']
+    },
+    {
+      id: 'business',
+      name: 'Business',
+      description: 'Business formation, partnerships, and commercial agreements',
+      icon: 'building',
+      subcategories: ['incorporation', 'partnerships', 'commercial', 'licensing']
+    },
+    {
+      id: 'property',
+      name: 'Property',
+      description: 'Real estate, leases, and property-related documents',
+      icon: 'home',
+      subcategories: ['purchase', 'lease', 'rental', 'development']
+    },
+    {
+      id: 'family',
+      name: 'Family',
+      description: 'Family law, wills, and personal legal documents',
+      icon: 'users',
+      subcategories: ['wills', 'divorce', 'custody', 'adoption']
+    },
+    {
+      id: 'intellectual-property',
+      name: 'Intellectual Property',
+      description: 'Patents, trademarks, and IP protection documents',
+      icon: 'lightbulb',
+      subcategories: ['patents', 'trademarks', 'copyright', 'licensing']
+    },
+    {
+      id: 'compliance',
+      name: 'Compliance',
+      description: 'Regulatory compliance and legal compliance documents',
+      icon: 'shield',
+      subcategories: ['gdpr', 'financial', 'healthcare', 'environmental']
+    }
+  ],
+
+  // Template access levels
+  accessLevels: {
+    public: {
+      name: 'Public',
+      description: 'Free templates available to all users',
+      features: ['basic_customization', 'pdf_download', 'preview'],
+      limitations: ['watermark', 'basic_fields_only']
+    },
+    premium: {
+      name: 'Premium',
+      description: 'Advanced templates for premium subscribers',
+      features: ['advanced_customization', 'multiple_formats', 'legal_review', 'version_history'],
+      limitations: []
+    },
+    enterprise: {
+      name: 'Enterprise',
+      description: 'Custom templates for enterprise clients',
+      features: ['custom_branding', 'api_access', 'bulk_generation', 'priority_support'],
+      limitations: []
+    }
+  },
+
+  // Template generation settings
+  generation: {
+    maxCustomFields: 50,
+    supportedFormats: ['pdf', 'docx', 'html'],
+    aiModels: ['gpt-4', 'claude-3'],
+    maxGenerationTime: 30000, // 30 seconds
+    retryAttempts: 3
+  },
+
+  // Singapore-specific settings
+  singapore: {
+    jurisdiction: 'Singapore',
+    language: 'English',
+    currency: 'SGD',
+    legalSystem: 'Common Law',
+    regulatoryBodies: [
+      'ACRA', 'MAS', 'MOM', 'URA', 'IRAS', 'AGC'
+    ],
+    complianceStandards: [
+      'Companies Act',
+      'Employment Act',
+      'Personal Data Protection Act',
+      'Securities and Futures Act'
+    ]
+  },
+
+  // Template validation rules
+  validation: {
+    requiredFields: ['title', 'description', 'category', 'jurisdiction'],
+    maxTitleLength: 100,
+    maxDescriptionLength: 500,
+    minPreviewLength: 100,
+    allowedFileTypes: ['pdf', 'docx', 'txt'],
+    maxFileSize: 5 * 1024 * 1024, // 5MB
+  },
+
+  // Pricing configuration
+  pricing: {
+    free: {
+      templatesPerMonth: 3,
+      customizationLevel: 'basic',
+      downloadFormats: ['pdf'],
+      support: 'community'
+    },
+    premium: {
+      templatesPerMonth: 50,
+      customizationLevel: 'advanced',
+      downloadFormats: ['pdf', 'docx', 'html'],
+      support: 'email'
+    },
+    enterprise: {
+      templatesPerMonth: 'unlimited',
+      customizationLevel: 'full',
+      downloadFormats: ['pdf', 'docx', 'html', 'xml'],
+      support: 'priority'
+    }
+  }
 } as const;

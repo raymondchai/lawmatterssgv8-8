@@ -54,7 +54,15 @@ export const LawFirmDirectory: React.FC<LawFirmDirectoryProps> = ({
   const [minRating, setMinRating] = useState<number>(0);
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [sortBy, setSortBy] = useState<'rating' | 'name' | 'newest'>('rating');
+  const [sortBy, setSortBy] = useState<'rating' | 'name' | 'newest' | 'reviews'>('rating');
+
+  // Enhanced filters
+  const [locationFilter, setLocationFilter] = useState('');
+  const [firmSizeFilter, setFirmSizeFilter] = useState('');
+  const [feeStructureFilter, setFeeStructureFilter] = useState('');
+  const [languageFilter, setLanguageFilter] = useState('');
+  const [acceptsLegalAid, setAcceptsLegalAid] = useState(false);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
   useEffect(() => {
     loadLawFirms();
@@ -62,7 +70,7 @@ export const LawFirmDirectory: React.FC<LawFirmDirectoryProps> = ({
 
   useEffect(() => {
     filterAndSortFirms();
-  }, [lawFirms, searchQuery, selectedPracticeAreas, minRating, verifiedOnly, sortBy]);
+  }, [lawFirms, searchQuery, selectedPracticeAreas, minRating, verifiedOnly, sortBy, locationFilter, firmSizeFilter, feeStructureFilter, languageFilter, acceptsLegalAid]);
 
   const loadLawFirms = async () => {
     try {
@@ -86,7 +94,8 @@ export const LawFirmDirectory: React.FC<LawFirmDirectoryProps> = ({
       filtered = filtered.filter(firm =>
         firm.name.toLowerCase().includes(query) ||
         firm.description.toLowerCase().includes(query) ||
-        firm.practice_areas.some(area => area.toLowerCase().includes(query))
+        firm.practice_areas.some(area => area.toLowerCase().includes(query)) ||
+        firm.address.toLowerCase().includes(query)
       );
     }
 
@@ -107,6 +116,36 @@ export const LawFirmDirectory: React.FC<LawFirmDirectoryProps> = ({
       filtered = filtered.filter(firm => firm.verified);
     }
 
+    // Apply location filter
+    if (locationFilter.trim()) {
+      const location = locationFilter.toLowerCase();
+      filtered = filtered.filter(firm =>
+        firm.address.toLowerCase().includes(location)
+      );
+    }
+
+    // Apply firm size filter
+    if (firmSizeFilter) {
+      filtered = filtered.filter(firm => firm.firm_size === firmSizeFilter);
+    }
+
+    // Apply fee structure filter
+    if (feeStructureFilter) {
+      filtered = filtered.filter(firm => firm.fee_structure === feeStructureFilter);
+    }
+
+    // Apply language filter
+    if (languageFilter) {
+      filtered = filtered.filter(firm =>
+        firm.languages?.includes(languageFilter)
+      );
+    }
+
+    // Apply legal aid filter
+    if (acceptsLegalAid) {
+      filtered = filtered.filter(firm => firm.accepts_legal_aid === true);
+    }
+
     // Apply sorting
     filtered.sort((a, b) => {
       switch (sortBy) {
@@ -116,6 +155,8 @@ export const LawFirmDirectory: React.FC<LawFirmDirectoryProps> = ({
           return a.name.localeCompare(b.name);
         case 'newest':
           return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        case 'reviews':
+          return (b.total_reviews || 0) - (a.total_reviews || 0);
         default:
           return 0;
       }
@@ -137,6 +178,11 @@ export const LawFirmDirectory: React.FC<LawFirmDirectoryProps> = ({
     setSelectedPracticeAreas([]);
     setMinRating(0);
     setVerifiedOnly(false);
+    setLocationFilter('');
+    setFirmSizeFilter('');
+    setFeeStructureFilter('');
+    setLanguageFilter('');
+    setAcceptsLegalAid(false);
   };
 
   const renderStars = (rating: number) => {
@@ -204,8 +250,8 @@ export const LawFirmDirectory: React.FC<LawFirmDirectoryProps> = ({
         <div>
           <p className="text-xs font-medium text-gray-600 mb-1">Practice Areas:</p>
           <div className="flex flex-wrap gap-1">
-            {firm.practice_areas.slice(0, 3).map((area, index) => (
-              <Badge key={index} variant="secondary" className="text-xs">
+            {firm.practice_areas.slice(0, 3).map((area) => (
+              <Badge key={area} variant="secondary" className="text-xs">
                 {area}
               </Badge>
             ))}
@@ -215,6 +261,30 @@ export const LawFirmDirectory: React.FC<LawFirmDirectoryProps> = ({
               </Badge>
             )}
           </div>
+        </div>
+
+        {/* Enhanced Information */}
+        <div className="flex flex-wrap gap-2 text-xs text-gray-500">
+          {firm.firm_size && (
+            <div className="flex items-center space-x-1">
+              <Users className="h-3 w-3" />
+              <span className="capitalize">{firm.firm_size}</span>
+            </div>
+          )}
+          {firm.consultation_fee && (
+            <div className="flex items-center space-x-1">
+              <DollarSign className="h-3 w-3" />
+              <span>${firm.consultation_fee}</span>
+            </div>
+          )}
+          {firm.accepts_legal_aid && (
+            <Badge variant="outline" className="text-xs">
+              Legal Aid
+            </Badge>
+          )}
+          {firm.total_reviews && firm.total_reviews > 0 && (
+            <span>({firm.total_reviews} reviews)</span>
+          )}
         </div>
       </CardContent>
     </Card>
@@ -317,12 +387,114 @@ export const LawFirmDirectory: React.FC<LawFirmDirectoryProps> = ({
                     <SelectItem value="rating">Highest Rated</SelectItem>
                     <SelectItem value="name">Name A-Z</SelectItem>
                     <SelectItem value="newest">Newest First</SelectItem>
+                    <SelectItem value="reviews">Most Reviews</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+
+              <Button
+                variant="outline"
+                onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                className="w-full md:w-auto"
+              >
+                Advanced Filters
+              </Button>
             </div>
 
-            {/* Advanced Filters */}
+            {/* Enhanced Filters */}
+            {showAdvancedFilters && (
+              <div className="border-t pt-4 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {/* Location Filter */}
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 mb-2 block">
+                      Location
+                    </label>
+                    <Input
+                      placeholder="Enter location..."
+                      value={locationFilter}
+                      onChange={(e) => setLocationFilter(e.target.value)}
+                    />
+                  </div>
+
+                  {/* Firm Size Filter */}
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 mb-2 block">
+                      Firm Size
+                    </label>
+                    <Select value={firmSizeFilter} onValueChange={setFirmSizeFilter}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Any size" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Any size</SelectItem>
+                        <SelectItem value="solo">Solo Practice</SelectItem>
+                        <SelectItem value="small">Small (2-10 lawyers)</SelectItem>
+                        <SelectItem value="medium">Medium (11-50 lawyers)</SelectItem>
+                        <SelectItem value="large">Large (50+ lawyers)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Fee Structure Filter */}
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 mb-2 block">
+                      Fee Structure
+                    </label>
+                    <Select value={feeStructureFilter} onValueChange={setFeeStructureFilter}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Any structure" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Any structure</SelectItem>
+                        <SelectItem value="hourly">Hourly Rate</SelectItem>
+                        <SelectItem value="fixed">Fixed Fee</SelectItem>
+                        <SelectItem value="contingency">Contingency</SelectItem>
+                        <SelectItem value="mixed">Mixed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Language Filter */}
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 mb-2 block">
+                      Language
+                    </label>
+                    <Select value={languageFilter} onValueChange={setLanguageFilter}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Any language" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Any language</SelectItem>
+                        <SelectItem value="English">English</SelectItem>
+                        <SelectItem value="Mandarin">Mandarin</SelectItem>
+                        <SelectItem value="Malay">Malay</SelectItem>
+                        <SelectItem value="Tamil">Tamil</SelectItem>
+                        <SelectItem value="Hindi">Hindi</SelectItem>
+                        <SelectItem value="Japanese">Japanese</SelectItem>
+                        <SelectItem value="Korean">Korean</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Additional Filters */}
+                <div className="flex flex-wrap gap-4">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="legal-aid"
+                      checked={acceptsLegalAid}
+                      onCheckedChange={setAcceptsLegalAid}
+                    />
+                    <label htmlFor="legal-aid" className="text-sm text-gray-700">
+                      Accepts Legal Aid
+                    </label>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Basic Filters */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Practice Areas */}
               <div>
@@ -384,10 +556,11 @@ export const LawFirmDirectory: React.FC<LawFirmDirectoryProps> = ({
             </div>
 
             {/* Clear Filters */}
-            {(searchQuery || selectedPracticeAreas.length > 0 || minRating > 0 || verifiedOnly) && (
+            {(searchQuery || selectedPracticeAreas.length > 0 || minRating > 0 || verifiedOnly ||
+              locationFilter || firmSizeFilter || feeStructureFilter || languageFilter || acceptsLegalAid) && (
               <div className="flex justify-end">
                 <Button variant="outline" size="sm" onClick={clearFilters}>
-                  Clear Filters
+                  Clear All Filters
                 </Button>
               </div>
             )}
