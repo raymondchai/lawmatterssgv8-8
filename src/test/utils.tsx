@@ -141,17 +141,33 @@ export const mockSupabaseClient = {
       data: { subscription: { unsubscribe: vi.fn() } },
     })),
   },
-  from: vi.fn(() => ({
-    select: vi.fn().mockReturnThis(),
-    insert: vi.fn().mockReturnThis(),
-    update: vi.fn().mockReturnThis(),
-    delete: vi.fn().mockReturnThis(),
-    eq: vi.fn().mockReturnThis(),
-    single: vi.fn(),
-    order: vi.fn().mockReturnThis(),
-    or: vi.fn().mockReturnThis(),
-    filter: vi.fn().mockReturnThis(),
-  })),
+  from: vi.fn(() => {
+    const mockChain = {
+      select: vi.fn().mockReturnThis(),
+      insert: vi.fn().mockReturnThis(),
+      update: vi.fn().mockReturnThis(),
+      delete: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      or: vi.fn().mockReturnThis(),
+      filter: vi.fn().mockReturnThis(),
+      single: vi.fn(),
+      mockResolvedValue: vi.fn(),
+      mockRejectedValue: vi.fn(),
+    };
+
+    // Make all chain methods return the chain object with mock methods
+    Object.keys(mockChain).forEach(key => {
+      if (key !== 'mockResolvedValue' && key !== 'mockRejectedValue' && key !== 'single') {
+        mockChain[key].mockReturnValue(mockChain);
+      }
+    });
+
+    // Single should also return the chain for mocking
+    mockChain.single.mockReturnValue(mockChain);
+
+    return mockChain;
+  }),
   storage: {
     from: vi.fn(() => ({
       upload: vi.fn(),

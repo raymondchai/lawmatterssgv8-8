@@ -44,6 +44,15 @@ vi.mock('@/lib/supabase', () => ({
   supabase: mockSupabaseClient,
 }));
 
+// Mock usage tracking service
+vi.mock('@/lib/services/usageTracking', () => ({
+  usageTrackingService: {
+    checkUsageLimit: vi.fn().mockResolvedValue({ allowed: true }),
+    checkAndIncrementUsage: vi.fn().mockResolvedValue({ allowed: true }),
+    getUsageStats: vi.fn().mockResolvedValue({}),
+  },
+}));
+
 describe('documentsApi', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -52,10 +61,20 @@ describe('documentsApi', () => {
   describe('getDocuments', () => {
     it('should fetch all documents for the current user', async () => {
       const mockDocuments = [mockDocument];
-      mockSupabaseClient.from().select().order().mockResolvedValue({
+
+      // Mock the chain to return a resolved promise
+      const mockChain = {
+        select: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+      };
+
+      // The final method in the chain should return a promise
+      mockChain.order.mockResolvedValue({
         data: mockDocuments,
         error: null,
       });
+
+      mockSupabaseClient.from.mockReturnValue(mockChain);
 
       const result = await documentsApi.getDocuments();
 
@@ -65,10 +84,18 @@ describe('documentsApi', () => {
 
     it('should throw error when fetch fails', async () => {
       const mockError = new Error('Database error');
-      mockSupabaseClient.from().select().order().mockResolvedValue({
+
+      const mockChain = {
+        select: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+      };
+
+      mockChain.order.mockResolvedValue({
         data: null,
         error: mockError,
       });
+
+      mockSupabaseClient.from.mockReturnValue(mockChain);
 
       await expect(documentsApi.getDocuments()).rejects.toThrow('Database error');
     });
@@ -76,10 +103,18 @@ describe('documentsApi', () => {
 
   describe('getDocument', () => {
     it('should fetch a specific document by ID', async () => {
-      mockSupabaseClient.from().select().eq().single().mockResolvedValue({
+      const mockChain = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockReturnThis(),
+      };
+
+      mockChain.single.mockResolvedValue({
         data: mockDocument,
         error: null,
       });
+
+      mockSupabaseClient.from.mockReturnValue(mockChain);
 
       const result = await documentsApi.getDocument('test-id');
 
@@ -89,10 +124,19 @@ describe('documentsApi', () => {
 
     it('should throw error when document not found', async () => {
       const mockError = new Error('Document not found');
-      mockSupabaseClient.from().select().eq().single().mockResolvedValue({
+
+      const mockChain = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockReturnThis(),
+      };
+
+      mockChain.single.mockResolvedValue({
         data: null,
         error: mockError,
       });
+
+      mockSupabaseClient.from.mockReturnValue(mockChain);
 
       await expect(documentsApi.getDocument('invalid-id')).rejects.toThrow('Document not found');
     });
@@ -109,22 +153,32 @@ describe('documentsApi', () => {
         error: null,
       });
 
-      // Mock storage upload
-      mockSupabaseClient.storage.from().upload.mockResolvedValue({
-        data: { path: 'user-id/123-test.pdf' },
-        error: null,
-      });
+      // Mock storage operations
+      const mockStorageChain = {
+        upload: vi.fn().mockResolvedValue({
+          data: { path: 'user-id/123-test.pdf' },
+          error: null,
+        }),
+        getPublicUrl: vi.fn().mockReturnValue({
+          data: { publicUrl: 'https://example.com/test.pdf' },
+        }),
+      };
 
-      // Mock storage getPublicUrl
-      mockSupabaseClient.storage.from().getPublicUrl.mockReturnValue({
-        data: { publicUrl: 'https://example.com/test.pdf' },
-      });
+      mockSupabaseClient.storage.from.mockReturnValue(mockStorageChain);
 
-      // Mock database insert
-      mockSupabaseClient.from().insert().select().single().mockResolvedValue({
+      // Mock database insert chain
+      const mockDbChain = {
+        insert: vi.fn().mockReturnThis(),
+        select: vi.fn().mockReturnThis(),
+        single: vi.fn().mockReturnThis(),
+      };
+
+      mockDbChain.single.mockResolvedValue({
         data: mockDocument,
         error: null,
       });
+
+      mockSupabaseClient.from.mockReturnValue(mockDbChain);
 
       const result = await documentsApi.uploadDocument(mockFile, 'contract');
 
@@ -154,10 +208,14 @@ describe('documentsApi', () => {
       });
 
       const uploadError = new Error('Storage upload failed');
-      mockSupabaseClient.storage.from().upload.mockResolvedValue({
-        data: null,
-        error: uploadError,
-      });
+      const mockStorageChain = {
+        upload: vi.fn().mockResolvedValue({
+          data: null,
+          error: uploadError,
+        }),
+      };
+
+      mockSupabaseClient.storage.from.mockReturnValue(mockStorageChain);
 
       await expect(documentsApi.uploadDocument(mockFile, 'contract')).rejects.toThrow('Storage upload failed');
     });
@@ -168,10 +226,19 @@ describe('documentsApi', () => {
       const updates = { processing_status: 'completed' as const };
       const updatedDocument = { ...mockDocument, ...updates };
 
-      mockSupabaseClient.from().update().eq().select().single().mockResolvedValue({
+      const mockChain = {
+        update: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        select: vi.fn().mockReturnThis(),
+        single: vi.fn().mockReturnThis(),
+      };
+
+      mockChain.single.mockResolvedValue({
         data: updatedDocument,
         error: null,
       });
+
+      mockSupabaseClient.from.mockReturnValue(mockChain);
 
       const result = await documentsApi.updateDocument('test-id', updates);
 
@@ -183,10 +250,19 @@ describe('documentsApi', () => {
       const updates = { processing_status: 'completed' as const };
       const mockError = new Error('Update failed');
 
-      mockSupabaseClient.from().update().eq().select().single().mockResolvedValue({
+      const mockChain = {
+        update: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        select: vi.fn().mockReturnThis(),
+        single: vi.fn().mockReturnThis(),
+      };
+
+      mockChain.single.mockResolvedValue({
         data: null,
         error: mockError,
       });
+
+      mockSupabaseClient.from.mockReturnValue(mockChain);
 
       await expect(documentsApi.updateDocument('test-id', updates)).rejects.toThrow('Update failed');
     });
@@ -199,16 +275,27 @@ describe('documentsApi', () => {
       getDocumentSpy.mockResolvedValue(mockDocument);
 
       // Mock storage remove
-      mockSupabaseClient.storage.from().remove.mockResolvedValue({
+      const mockStorageChain = {
+        remove: vi.fn().mockResolvedValue({
+          data: null,
+          error: null,
+        }),
+      };
+
+      mockSupabaseClient.storage.from.mockReturnValue(mockStorageChain);
+
+      // Mock database delete
+      const mockDbChain = {
+        delete: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+      };
+
+      mockDbChain.eq.mockResolvedValue({
         data: null,
         error: null,
       });
 
-      // Mock database delete
-      mockSupabaseClient.from().delete().eq().mockResolvedValue({
-        data: null,
-        error: null,
-      });
+      mockSupabaseClient.from.mockReturnValue(mockDbChain);
 
       await documentsApi.deleteDocument('test-id');
 
@@ -221,16 +308,27 @@ describe('documentsApi', () => {
       const getDocumentSpy = vi.spyOn(documentsApi, 'getDocument');
       getDocumentSpy.mockResolvedValue(mockDocument);
 
-      mockSupabaseClient.storage.from().remove.mockResolvedValue({
-        data: null,
-        error: null,
-      });
+      const mockStorageChain = {
+        remove: vi.fn().mockResolvedValue({
+          data: null,
+          error: null,
+        }),
+      };
+
+      mockSupabaseClient.storage.from.mockReturnValue(mockStorageChain);
 
       const deleteError = new Error('Delete failed');
-      mockSupabaseClient.from().delete().eq().mockResolvedValue({
+      const mockDbChain = {
+        delete: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+      };
+
+      mockDbChain.eq.mockResolvedValue({
         data: null,
         error: deleteError,
       });
+
+      mockSupabaseClient.from.mockReturnValue(mockDbChain);
 
       await expect(documentsApi.deleteDocument('test-id')).rejects.toThrow('Delete failed');
     });
@@ -239,10 +337,19 @@ describe('documentsApi', () => {
   describe('searchDocuments', () => {
     it('should search documents by query', async () => {
       const mockDocuments = [mockDocument];
-      mockSupabaseClient.from().select().or().order().mockResolvedValue({
+
+      const mockChain = {
+        select: vi.fn().mockReturnThis(),
+        or: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+      };
+
+      mockChain.order.mockResolvedValue({
         data: mockDocuments,
         error: null,
       });
+
+      mockSupabaseClient.from.mockReturnValue(mockChain);
 
       const result = await documentsApi.searchDocuments('test query');
 
@@ -252,10 +359,19 @@ describe('documentsApi', () => {
 
     it('should throw error when search fails', async () => {
       const searchError = new Error('Search failed');
-      mockSupabaseClient.from().select().or().order().mockResolvedValue({
+
+      const mockChain = {
+        select: vi.fn().mockReturnThis(),
+        or: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+      };
+
+      mockChain.order.mockResolvedValue({
         data: null,
         error: searchError,
       });
+
+      mockSupabaseClient.from.mockReturnValue(mockChain);
 
       await expect(documentsApi.searchDocuments('test query')).rejects.toThrow('Search failed');
     });
@@ -264,10 +380,19 @@ describe('documentsApi', () => {
   describe('getDocumentsByStatus', () => {
     it('should fetch documents by status', async () => {
       const mockDocuments = [mockDocument];
-      mockSupabaseClient.from().select().eq().order().mockResolvedValue({
+
+      const mockChain = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+      };
+
+      mockChain.order.mockResolvedValue({
         data: mockDocuments,
         error: null,
       });
+
+      mockSupabaseClient.from.mockReturnValue(mockChain);
 
       const result = await documentsApi.getDocumentsByStatus('completed');
 
@@ -277,10 +402,19 @@ describe('documentsApi', () => {
 
     it('should throw error when fetch fails', async () => {
       const fetchError = new Error('Fetch failed');
-      mockSupabaseClient.from().select().eq().order().mockResolvedValue({
+
+      const mockChain = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+      };
+
+      mockChain.order.mockResolvedValue({
         data: null,
         error: fetchError,
       });
+
+      mockSupabaseClient.from.mockReturnValue(mockChain);
 
       await expect(documentsApi.getDocumentsByStatus('completed')).rejects.toThrow('Fetch failed');
     });

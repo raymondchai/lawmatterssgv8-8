@@ -109,8 +109,8 @@ describe('LoginForm', () => {
 
   it('submits form with valid data', async () => {
     const user = userEvent.setup();
-    mockSignIn.mockResolvedValue(undefined);
-    
+    mockSignIn.mockResolvedValue({ requiresTwoFactor: false });
+
     render(<LoginForm />);
 
     const emailInput = screen.getByLabelText(/email/i);

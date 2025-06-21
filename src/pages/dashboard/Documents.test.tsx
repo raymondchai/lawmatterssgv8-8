@@ -3,6 +3,8 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { render, mockUser, mockDocument } from '@/test/utils';
 import Documents from './Documents';
+import { documentsApi } from '@/lib/api/documents';
+import { profilesApi } from '@/lib/api/profiles';
 
 // Mock the auth context
 const mockUseAuth = vi.fn(() => ({
@@ -15,30 +17,21 @@ vi.mock('@/contexts/AuthContext', () => ({
 }));
 
 // Mock the document API
-const mockGetDocuments = vi.fn();
-const mockGetDocument = vi.fn();
-const mockUploadDocument = vi.fn();
-const mockDeleteDocument = vi.fn();
-const mockSearchDocuments = vi.fn();
-
 vi.mock('@/lib/api/documents', () => ({
   documentsApi: {
-    getDocuments: mockGetDocuments,
-    getDocument: mockGetDocument,
-    uploadDocument: mockUploadDocument,
-    deleteDocument: mockDeleteDocument,
-    searchDocuments: mockSearchDocuments,
+    getDocuments: vi.fn(),
+    getDocument: vi.fn(),
+    uploadDocument: vi.fn(),
+    deleteDocument: vi.fn(),
+    searchDocuments: vi.fn(),
   },
 }));
 
 // Mock the profiles API
-const mockCheckUsageLimit = vi.fn();
-const mockIncrementUsage = vi.fn();
-
 vi.mock('@/lib/api/profiles', () => ({
   profilesApi: {
-    checkUsageLimit: mockCheckUsageLimit,
-    incrementUsage: mockIncrementUsage,
+    checkUsageLimit: vi.fn(),
+    incrementUsage: vi.fn(),
   },
 }));
 
@@ -62,6 +55,12 @@ vi.mock('lodash', () => ({
 }));
 
 describe('Documents Page', () => {
+  // Get references to the mocked functions
+  const mockGetDocuments = vi.mocked(documentsApi.getDocuments);
+  const mockGetDocument = vi.mocked(documentsApi.getDocument);
+  const mockSearchDocuments = vi.mocked(documentsApi.searchDocuments);
+  const mockCheckUsageLimit = vi.mocked(profilesApi.checkUsageLimit);
+
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetDocuments.mockResolvedValue([mockDocument]);

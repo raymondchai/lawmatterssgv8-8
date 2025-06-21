@@ -24,6 +24,8 @@ import {
 import { toast } from '@/components/ui/sonner';
 import { useAnnotations } from '@/hooks/useAnnotations';
 import { useAuth } from '@/contexts/AuthContext';
+import { useDocumentCollaboration } from '@/hooks/useRealTime';
+import { ConnectionStatus } from '@/components/realtime/ConnectionStatus';
 import type { DocumentAnnotation } from '@/lib/api/annotations';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -78,6 +80,14 @@ export const EnhancedPDFViewer: React.FC<EnhancedPDFViewerProps> = ({
   } = useAnnotations(documentId);
 
   const { user } = useAuth();
+
+  // Real-time collaboration features
+  const {
+    processingStatus,
+    presenceData,
+    updateCurrentPage,
+    isConnected
+  } = useDocumentCollaboration(documentId);
 
   // Notify parent component when annotations change
   useEffect(() => {
@@ -139,7 +149,7 @@ export const EnhancedPDFViewer: React.FC<EnhancedPDFViewerProps> = ({
   const handleMouseUp = useCallback(() => {
     if (isSelecting && currentSelection && selectedTool === 'highlight') {
       if (currentSelection.width > 10 && currentSelection.height > 10) {
-        createHighlight(currentSelection);
+        handleCreateHighlight(currentSelection);
       }
     }
     setIsSelecting(false);
@@ -293,6 +303,13 @@ export const EnhancedPDFViewer: React.FC<EnhancedPDFViewerProps> = ({
             <Button variant="ghost" size="sm" onClick={toggleFullscreen}>
               {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
             </Button>
+
+            {/* Real-time Status and Collaboration */}
+            <ConnectionStatus
+              documentId={documentId}
+              showUserPresence={true}
+              className="ml-auto"
+            />
           </div>
         </div>
       </div>
@@ -356,16 +373,35 @@ export const EnhancedPDFViewer: React.FC<EnhancedPDFViewerProps> = ({
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-80">
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <Badge variant="outline">{annotation.type}</Badge>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => deleteAnnotation(annotation.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                          <div className="space-y-3">
+                            {/* Header with user info and actions */}
+                            <div className="flex items-start justify-between">
+                              <div className="flex items-center space-x-2">
+                                <Avatar className="h-6 w-6">
+                                  <AvatarImage src={annotation.user?.avatar_url} />
+                                  <AvatarFallback className="text-xs">
+                                    {annotation.user?.first_name?.[0]}{annotation.user?.last_name?.[0]}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="flex flex-col">
+                                  <span className="text-sm font-medium">
+                                    {annotation.user?.first_name} {annotation.user?.last_name}
+                                  </span>
+                                  <span className="text-xs text-gray-500">
+                                    {formatDistanceToNow(new Date(annotation.created_at), { addSuffix: true })}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="flex items-center space-x-1">
+                                <Badge variant="outline" className="text-xs">{annotation.type}</Badge>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDeleteAnnotation(annotation.id)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </div>
                             {editingAnnotation === annotation.id ? (
                               <div className="space-y-2">
@@ -378,7 +414,7 @@ export const EnhancedPDFViewer: React.FC<EnhancedPDFViewerProps> = ({
                                 <div className="flex space-x-2">
                                   <Button
                                     size="sm"
-                                    onClick={() => updateAnnotation(annotation.id, newAnnotationContent)}
+                                    onClick={() => handleUpdateAnnotation(annotation.id, newAnnotationContent)}
                                   >
                                     <Save className="h-4 w-4 mr-1" />
                                     Save

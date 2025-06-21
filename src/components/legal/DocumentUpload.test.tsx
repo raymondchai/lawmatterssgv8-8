@@ -28,6 +28,26 @@ vi.mock('@/lib/api/documents', () => ({
   },
 }));
 
+// Mock the document processor and OCR services
+vi.mock('@/lib/services/documentProcessor', () => ({
+  processDocument: vi.fn(),
+}));
+
+vi.mock('@/lib/services/ocr', () => ({
+  extractTextFromPDF: vi.fn(),
+  extractTextFromImage: vi.fn(),
+}));
+
+// Mock the usage tracking service
+const mockUsageTrackingService = {
+  checkUsageLimit: vi.fn(),
+  incrementUsage: vi.fn(),
+};
+
+vi.mock('@/lib/services/usageTracking', () => ({
+  usageTrackingService: mockUsageTrackingService,
+}));
+
 // Mock react-dropzone
 vi.mock('react-dropzone', () => ({
   useDropzone: vi.fn(({ onDrop }) => ({
@@ -50,7 +70,6 @@ vi.mock('@/components/ui/sonner', () => ({
 }));
 
 // Get mocked functions
-const mockCheckUsageLimit = vi.fn();
 const mockUploadDocument = vi.fn();
 
 describe('DocumentUpload', () => {
@@ -58,7 +77,19 @@ describe('DocumentUpload', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockCheckUsageLimit.mockResolvedValue(true);
+
+    // Mock usage tracking service methods
+    mockUsageTrackingService.checkUsageLimit.mockResolvedValue({
+      allowed: true,
+      limit: 10,
+      current: 2,
+      remaining: 8,
+      tier: 'free',
+      percentage: 20
+    });
+    mockUsageTrackingService.incrementUsage.mockResolvedValue(undefined);
+
+    // Mock documents API
     mockUploadDocument.mockResolvedValue({
       id: 'test-doc-id',
       filename: 'test.pdf',
@@ -87,7 +118,7 @@ describe('DocumentUpload', () => {
 
     render(<DocumentUpload onUploadComplete={mockOnUploadComplete} />);
 
-    expect(screen.getByText(/up to 100mb/i)).toBeInTheDocument();
+    expect(screen.getByText(/up to 50mb/i)).toBeInTheDocument();
   });
 
   it('handles file selection and shows file list', async () => {
@@ -213,15 +244,22 @@ describe('DocumentUpload', () => {
 
     await onDropCallback([mockFile]);
 
-    expect(mockCheckUsageLimit).toHaveBeenCalledWith('document_upload');
+    expect(mockUsageTrackingService.checkUsageLimit).toHaveBeenCalledWith('document_upload');
   });
 
   it('shows error when usage limit is exceeded', async () => {
     const { toast } = await import('@/components/ui/sonner');
     const { useDropzone } = await import('react-dropzone');
     const mockFile = createMockFile('test.pdf', 1024, 'application/pdf');
-    
-    mockCheckUsageLimit.mockResolvedValue(false);
+
+    mockUsageTrackingService.checkUsageLimit.mockResolvedValue({
+      allowed: false,
+      limit: 10,
+      current: 10,
+      remaining: 0,
+      tier: 'free',
+      percentage: 100
+    });
     
     let onDropCallback: any;
     (useDropzone as any).mockImplementation(({ onDrop }: any) => {
@@ -237,14 +275,19 @@ describe('DocumentUpload', () => {
 
     await onDropCallback([mockFile]);
 
-    expect(toast.error).toHaveBeenCalledWith('Upload limit reached for your subscription tier');
+    expect(toast.error).toHaveBeenCalledWith('Upload limit reached. You have used 10/10 document uploads this month. Please upgrade your plan to continue.');
   });
 
   it('rejects files that are too large', async () => {
+    // Ensure we're using a free tier user
+    mockUseAuth.mockReturnValue({
+      profile: { ...mockUser, subscription_tier: 'free' },
+    });
+
     const { toast } = await import('@/components/ui/sonner');
     const { useDropzone } = await import('react-dropzone');
     const mockFile = createMockFile('large.pdf', 50 * 1024 * 1024, 'application/pdf'); // 50MB
-    
+
     let onDropCallback: any;
     (useDropzone as any).mockImplementation(({ onDrop }: any) => {
       onDropCallback = onDrop;
@@ -259,9 +302,11 @@ describe('DocumentUpload', () => {
 
     await onDropCallback([mockFile]);
 
-    expect(toast.error).toHaveBeenCalledWith(
-      expect.stringContaining('is too large. Maximum size is 10MB')
-    );
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        expect.stringContaining('is too large. Maximum size is 10MB')
+      );
+    });
   });
 
   it('calls onUploadComplete when upload succeeds', async () => {

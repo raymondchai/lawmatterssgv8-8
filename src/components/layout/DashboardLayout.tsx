@@ -23,7 +23,8 @@ import {
   Shield
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { RealTimeStatusIndicator } from '@/components/ui/RealTimeStatusIndicator';
+import { ConnectionStatus } from '@/components/realtime/ConnectionStatus';
+import { NotificationCenter } from '@/components/realtime/NotificationCenter';
 import { cn } from '@/lib/utils';
 
 interface DashboardLayoutProps {
@@ -95,8 +96,9 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
 
             {/* User Menu */}
             <div className="flex items-center space-x-4">
-              {/* Real-time Status Indicator */}
-              <RealTimeStatusIndicator showDetails={true} />
+              {/* Real-time Components */}
+              <NotificationCenter />
+              <ConnectionStatus />
 
               {/* Subscription Badge */}
               <div className="hidden sm:block">

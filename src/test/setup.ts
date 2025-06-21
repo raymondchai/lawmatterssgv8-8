@@ -25,6 +25,49 @@ global.ResizeObserver = vi.fn().mockImplementation(() => ({
   disconnect: vi.fn(),
 }));
 
+// Mock DOMMatrix for PDF.js
+global.DOMMatrix = vi.fn().mockImplementation(() => ({
+  a: 1, b: 0, c: 0, d: 1, e: 0, f: 0,
+  is2D: true,
+  isIdentity: true,
+  inverse: vi.fn(),
+  multiply: vi.fn(),
+  scale: vi.fn(),
+  translate: vi.fn(),
+  rotate: vi.fn(),
+}));
+
+// Mock Canvas and CanvasRenderingContext2D for PDF.js
+global.HTMLCanvasElement.prototype.getContext = vi.fn().mockImplementation(() => ({
+  fillRect: vi.fn(),
+  clearRect: vi.fn(),
+  getImageData: vi.fn(),
+  putImageData: vi.fn(),
+  createImageData: vi.fn(),
+  setTransform: vi.fn(),
+  drawImage: vi.fn(),
+  save: vi.fn(),
+  restore: vi.fn(),
+  beginPath: vi.fn(),
+  moveTo: vi.fn(),
+  lineTo: vi.fn(),
+  closePath: vi.fn(),
+  stroke: vi.fn(),
+  fill: vi.fn(),
+  measureText: vi.fn(() => ({ width: 0 })),
+  canvas: {
+    width: 0,
+    height: 0,
+  },
+}));
+
+// Mock OffscreenCanvas
+global.OffscreenCanvas = vi.fn().mockImplementation(() => ({
+  getContext: vi.fn(),
+  width: 0,
+  height: 0,
+}));
+
 // Mock UI components globally
 vi.mock('@/components/ui/toaster', () => ({
   Toaster: () => null,

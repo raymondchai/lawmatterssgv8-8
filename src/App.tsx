@@ -8,6 +8,8 @@ import Index from "./pages/Index";
 import Pricing from "./pages/Pricing";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
+import ForgotPassword from "./pages/auth/ForgotPassword";
+import ResetPassword from "./pages/auth/ResetPassword";
 import Dashboard from "./pages/dashboard/Dashboard";
 import Documents from "./pages/dashboard/Documents";
 import AIAssistant from "./pages/dashboard/AIAssistant";
@@ -37,6 +39,8 @@ const App = () => (
             <Route path={ROUTES.pricing} element={<Pricing />} />
             <Route path={ROUTES.login} element={<Login />} />
             <Route path={ROUTES.register} element={<Register />} />
+            <Route path={ROUTES.forgotPassword} element={<ForgotPassword />} />
+            <Route path={ROUTES.resetPassword} element={<ResetPassword />} />
             <Route path={ROUTES.dashboard} element={<Dashboard />} />
             <Route path={ROUTES.documents} element={<Documents />} />
             <Route path="/dashboard/ai-assistant" element={<AIAssistant />} />
