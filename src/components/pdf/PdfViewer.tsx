@@ -3,7 +3,7 @@
  */
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Document, Page, pdfjs } from 'react-pdf';
+import { Document, Page } from 'react-pdf';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -29,9 +29,10 @@ import { AnnotationSidebar } from './AnnotationSidebar';
 import { useDocumentAnnotations, useAnnotationState } from '@/hooks/useAnnotations';
 import type { PdfAnnotation, AnnotationType, AnnotationColor } from '@/types/annotations';
 import { cn } from '@/lib/utils';
+import { getPdfJs } from '@/lib/config/pdfWorker';
 
-// Configure PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+// Initialize PDF.js worker
+getPdfJs();
 
 interface PdfViewerProps {
   documentId: string;

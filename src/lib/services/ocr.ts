@@ -1,8 +1,8 @@
 import Tesseract from 'tesseract.js';
-import * as pdfjsLib from 'pdfjs-dist';
+import { getPdfJs } from '@/lib/config/pdfWorker';
 
-// Configure PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+// Get configured PDF.js instance
+const pdfjsLib = getPdfJs();
 
 export interface OCRResult {
   text: string;

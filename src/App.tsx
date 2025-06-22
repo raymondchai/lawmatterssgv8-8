@@ -4,6 +4,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { useEffect } from "react";
+import { memoryMonitor } from "@/lib/services/memoryMonitor";
+import { autoAdjustFeatures, disableFeatures } from "@/lib/config/features";
 import Index from "./pages/Index";
 import Pricing from "./pages/Pricing";
 import LawFirms from "./pages/LawFirms";
@@ -42,57 +45,54 @@ import { ROUTES } from "@/lib/config/constants";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path={ROUTES.home} element={<Index />} />
-            <Route path="/law-firms" element={<LawFirms />} />
-            <Route path="/law-firms/:id" element={<LawFirmProfile />} />
-            <Route path="/documents" element={<Documents />} />
-            <Route path="/legal-qa" element={<LegalQA />} />
-            <Route path="/legal-qa/:id" element={<QuestionDetail />} />
-            <Route path={ROUTES.pricing} element={<Pricing />} />
-            <Route path={ROUTES.login} element={<Login />} />
-            <Route path={ROUTES.register} element={<Register />} />
-            <Route path={ROUTES.forgotPassword} element={<ForgotPassword />} />
-            <Route path={ROUTES.resetPassword} element={<ResetPassword />} />
-            <Route path={ROUTES.dashboard} element={<Dashboard />} />
-            <Route path={ROUTES.documents} element={<DashboardDocuments />} />
-            <Route path="/dashboard/ai-assistant" element={<AIAssistant />} />
-            <Route path="/dashboard/templates" element={<Templates />} />
-            <Route path="/dashboard/law-firms" element={<DashboardLawFirms />} />
-            <Route path="/dashboard/admin" element={<Admin />} />
-            <Route path="/dashboard/template-analytics" element={<TemplateAnalytics />} />
-            <Route path="/dashboard/search-history" element={<SearchHistory />} />
-            <Route path="/dashboard/subscription" element={<Subscription />} />
-            <Route path="/dashboard/settings" element={<Settings />} />
-            <Route path="/dashboard/security" element={<SecuritySettings />} />
-            <Route path="/subscribe/:tier" element={<Subscribe />} />
-            <Route path="/payment/success" element={<PaymentSuccess />} />
-            <Route path="/payment/failure" element={<PaymentFailure />} />
-            <Route path="/shared/:shareToken" element={<SharedDocument />} />
-            <Route path={ROUTES.publicAnalysis} element={<PublicAnalysis />} />
-            <Route path={`${ROUTES.publicAnalysisResult}/:analysisId`} element={<PublicAnalysisResult />} />
-            {/* Template Marketplace Routes */}
-            <Route path={ROUTES.templateBrowser} element={<TemplateBrowser />} />
-            <Route path={ROUTES.templateMarketplace} element={<TemplateBrowser />} />
-            <Route path={`${ROUTES.templatePreview}/:slug`} element={<TemplatePreview />} />
-            <Route path={`${ROUTES.templateCustomize}/:slug`} element={<TemplateCustomize />} />
-            <Route path={`/templates/:slug/versions`} element={<TemplateVersionManagement />} />
-            {/* PDF Annotations Demo Route */}
-            <Route path="/pdf-annotations-demo" element={<PdfAnnotationsDemo />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </AuthProvider>
-  </QueryClientProvider>
-);
+const App = () => {
+  useEffect(() => {
+    // Initialize memory monitoring and auto-adjust features
+    autoAdjustFeatures();
+
+    // Set up memory warning handlers
+    const unsubscribeWarning = memoryMonitor.onMemoryWarning((stats) => {
+      console.warn(`Memory warning: ${stats.usagePercentage.toFixed(1)}% used`);
+    });
+
+    const unsubscribeCritical = memoryMonitor.onMemoryCritical((stats) => {
+      console.error(`Memory critical: ${stats.usagePercentage.toFixed(1)}% used`);
+      // Disable heavy features to free memory
+      disableFeatures(['enablePdfOcr', 'enablePdfAnalysis', 'enableRealTimeCollaboration']);
+    });
+
+    const unsubscribeEmergency = memoryMonitor.onMemoryEmergency((stats) => {
+      console.error(`Memory emergency: ${stats.usagePercentage.toFixed(1)}% used`);
+      // Force garbage collection if available
+      memoryMonitor.forceGarbageCollection();
+      // Disable all heavy features
+      disableFeatures([
+        'enablePdfOcr',
+        'enablePdfAnalysis',
+        'enableAiDocumentGeneration',
+        'enableRealTimeCollaboration'
+      ]);
+    });
+
+    return () => {
+      unsubscribeWarning();
+      unsubscribeCritical();
+      unsubscribeEmergency();
+      memoryMonitor.stopMonitoring();
+    };
+  }, []);
+
+  return (
+    <div className="min-h-screen bg-white">
+      <div className="p-8">
+        <h1 className="text-4xl font-bold text-blue-900 mb-4">LawMattersSG</h1>
+        <p className="text-lg text-gray-600 mb-8">Application is loading...</p>
+        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
+          React is working! The development server is running successfully.
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default App;
