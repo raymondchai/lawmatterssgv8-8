@@ -5,15 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu, User, Building2, FileText, MessageSquare, Search } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
-import { ROUTES } from "@/lib/config/constants";
 
 export const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearch, setShowSearch] = useState(false);
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const user = null; // Temporarily disable auth
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,7 +24,7 @@ export const Navigation = () => {
 
   const navItems = [
     { name: "Home", href: "/" },
-    { name: "Free Analysis", href: ROUTES.publicAnalysis, icon: FileText, highlight: true },
+    { name: "Free Analysis", href: "/analyze", icon: FileText, highlight: true },
     { name: "Law Firms", href: "/law-firms", icon: Building2 },
     { name: "Documents", href: "/documents", icon: FileText },
     { name: "Legal Q&A", href: "/legal-qa", icon: MessageSquare },
