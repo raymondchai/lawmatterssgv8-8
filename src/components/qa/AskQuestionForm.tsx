@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { legalQAApi } from '@/lib/api/legalQA';
 import type { LegalQACategory, LegalQuestion } from '@/types';
-import { toast } from '@/components/ui/sonner';
+import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface AskQuestionFormProps {
@@ -37,6 +37,9 @@ export const AskQuestionForm: React.FC<AskQuestionFormProps> = ({
   const [loading, setLoading] = useState(false);
   const [currentTag, setCurrentTag] = useState('');
 
+  // Ensure categories is always an array
+  const safeCategories = Array.isArray(categories) ? categories : [];
+
   const [formData, setFormData] = useState({
     title: '',
     content: '',
@@ -53,11 +56,20 @@ export const AskQuestionForm: React.FC<AskQuestionFormProps> = ({
 
   const loadCategories = async () => {
     try {
+      console.log('AskQuestionForm: Loading categories...');
       const categoriesData = await legalQAApi.getCategories();
+      console.log('AskQuestionForm: Categories loaded:', categoriesData);
+      console.log('AskQuestionForm: Categories is array:', Array.isArray(categoriesData));
+
+      if (!Array.isArray(categoriesData)) {
+        throw new Error('Categories data is not an array');
+      }
+
       setCategories(categoriesData);
     } catch (error: any) {
-      console.error('Error loading categories:', error);
+      console.error('AskQuestionForm: Error loading categories:', error);
       toast.error('Failed to load categories');
+      setCategories([]); // Ensure we always have an array
     }
   };
 
@@ -209,10 +221,12 @@ export const AskQuestionForm: React.FC<AskQuestionFormProps> = ({
                     <SelectValue placeholder="Select a category" />
                   </SelectTrigger>
                   <SelectContent>
-                    {categories.map((category) => (
-                      <SelectItem key={category.id} value={category.id}>
-                        {category.name}
-                      </SelectItem>
+                    {safeCategories.map((category) => (
+                      category && category.id && category.name ? (
+                        <SelectItem key={category.id} value={category.id}>
+                          {category.name}
+                        </SelectItem>
+                      ) : null
                     ))}
                   </SelectContent>
                 </Select>

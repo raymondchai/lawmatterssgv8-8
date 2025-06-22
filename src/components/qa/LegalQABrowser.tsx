@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 import { legalQAApi } from '@/lib/api/legalQA';
 import type { LegalQuestion, LegalQACategory, LegalQAFilters } from '@/types';
-import { toast } from '@/components/ui/sonner';
+import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatDistanceToNow } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
@@ -46,11 +46,15 @@ export const LegalQABrowser: React.FC<LegalQABrowserProps> = ({
   const [questions, setQuestions] = useState<LegalQuestion[]>([]);
   const [categories, setCategories] = useState<LegalQACategory[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [sortBy, setSortBy] = useState<LegalQAFilters['sort_by']>('newest');
   const [showFilters, setShowFilters] = useState(false);
   const [activeTab, setActiveTab] = useState('all');
+
+  // Ensure categories is always an array
+  const safeCategories = Array.isArray(categories) ? categories : [];
 
   const [filters, setFilters] = useState<LegalQAFilters>({
     page: 1,
@@ -58,29 +62,75 @@ export const LegalQABrowser: React.FC<LegalQABrowserProps> = ({
   });
 
   useEffect(() => {
-    loadInitialData();
+    console.log('Initial useEffect triggered');
+
+    const initializeData = async () => {
+      try {
+        setLoading(true);
+
+        // Load categories first
+        console.log('Loading categories...');
+        const categoriesData = await legalQAApi.getCategories();
+        console.log('Categories loaded:', categoriesData);
+        console.log('Categories type:', typeof categoriesData);
+        console.log('Categories is array:', Array.isArray(categoriesData));
+
+        if (!Array.isArray(categoriesData)) {
+          throw new Error('Categories data is not an array');
+        }
+
+        setCategories(categoriesData);
+
+        // Load questions
+        console.log('Loading questions...');
+        const questionsData = await legalQAApi.getQuestions();
+        console.log('Questions loaded:', questionsData);
+        console.log('Questions type:', typeof questionsData);
+        console.log('Questions is array:', Array.isArray(questionsData));
+
+        if (!Array.isArray(questionsData)) {
+          throw new Error('Questions data is not an array');
+        }
+
+        setQuestions(questionsData);
+
+        setError(null);
+      } catch (error: any) {
+        console.error('Error initializing data:', error);
+        setError(`Failed to load Q&A data: ${error.message}`);
+      } finally {
+        console.log('Setting loading to false in initialization');
+        setLoading(false);
+      }
+    };
+
+    initializeData();
   }, []);
 
+  // Simplified effect for filtering - only when user interacts
   useEffect(() => {
-    loadQuestions();
-  }, [filters, searchQuery, selectedCategory, sortBy, activeTab]);
+    if (loading || categories.length === 0) return; // Don't filter while loading or no categories
 
-  const loadInitialData = async () => {
-    try {
-      const categoriesData = await legalQAApi.getCategories();
-      setCategories(categoriesData);
-    } catch (error: any) {
-      console.error('Error loading initial data:', error);
-      toast.error('Failed to load Q&A data');
+    console.log('Filter useEffect triggered:', {
+      searchQuery, selectedCategory, sortBy, activeTab
+    });
+
+    // Only reload questions if user has actually changed something
+    if (searchQuery || selectedCategory || activeTab !== 'all') {
+      loadQuestions();
     }
-  };
+  }, [searchQuery, selectedCategory, activeTab]);
+
+
 
   const loadQuestions = async () => {
     try {
       setLoading(true);
-      
+      console.log('Loading questions... activeTab:', activeTab);
+
       const queryFilters: LegalQAFilters = {
-        ...filters,
+        page: 1,
+        limit: 20,
         search: searchQuery || undefined,
         category_id: selectedCategory || undefined,
         sort_by: sortBy
@@ -104,12 +154,16 @@ export const LegalQABrowser: React.FC<LegalQABrowserProps> = ({
           break;
       }
 
+      console.log('Query filters:', queryFilters);
       const questionsData = await legalQAApi.getQuestions(queryFilters);
+      console.log('Questions loaded:', questionsData);
+      console.log('Questions count:', questionsData.length);
       setQuestions(questionsData);
     } catch (error: any) {
       console.error('Error loading questions:', error);
       toast.error('Failed to load questions');
     } finally {
+      console.log('Setting loading to false');
       setLoading(false);
     }
   };
@@ -286,8 +340,43 @@ export const LegalQABrowser: React.FC<LegalQABrowserProps> = ({
     </Card>
   );
 
+  if (error) {
+    return (
+      <div className={`space-y-6 ${className}`}>
+        <div className="text-center py-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Legal Q&A</h2>
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <p className="text-red-800">Error: {error}</p>
+            <Button
+              onClick={() => {
+                setError(null);
+                setLoading(true);
+                window.location.reload(); // Simple reload for now
+              }}
+              className="mt-2"
+            >
+              Try Again
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`space-y-6 ${className}`}>
+      {/* Debug Info */}
+      <div className="bg-yellow-50 border border-yellow-200 rounded p-4 text-sm">
+        <p><strong>Debug Info:</strong></p>
+        <p>Loading: {loading.toString()}</p>
+        <p>Questions count: {questions.length}</p>
+        <p>Categories count: {categories.length} (safe: {safeCategories.length})</p>
+        <p>Active tab: {activeTab}</p>
+        <p>Error: {error || 'none'}</p>
+        <p>Supabase URL: {import.meta.env.VITE_SUPABASE_URL}</p>
+        <p>Is Placeholder: {import.meta.env.VITE_SUPABASE_URL?.includes('placeholder').toString()}</p>
+      </div>
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -326,10 +415,12 @@ export const LegalQABrowser: React.FC<LegalQABrowserProps> = ({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">All categories</SelectItem>
-                    {categories.map((category) => (
-                      <SelectItem key={category.id} value={category.id}>
-                        {category.name}
-                      </SelectItem>
+                    {safeCategories.map((category) => (
+                      category && category.id && category.name ? (
+                        <SelectItem key={category.id} value={category.id}>
+                          {category.name}
+                        </SelectItem>
+                      ) : null
                     ))}
                   </SelectContent>
                 </Select>

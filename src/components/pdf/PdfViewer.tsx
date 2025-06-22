@@ -4,6 +4,8 @@
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Document, Page } from 'react-pdf';
+import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
+import 'react-pdf/dist/esm/Page/TextLayer.css';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -30,9 +32,6 @@ import { useDocumentAnnotations, useAnnotationState } from '@/hooks/useAnnotatio
 import type { PdfAnnotation, AnnotationType, AnnotationColor } from '@/types/annotations';
 import { cn } from '@/lib/utils';
 import { getPdfJs } from '@/lib/config/pdfWorker';
-
-// Initialize PDF.js worker
-getPdfJs();
 
 interface PdfViewerProps {
   documentId: string;
@@ -148,6 +147,19 @@ export function PdfViewer({
 
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  // Initialize PDF.js worker when component mounts
+  useEffect(() => {
+    const initializePdf = async () => {
+      try {
+        await getPdfJs();
+      } catch (error) {
+        console.error('Failed to initialize PDF.js:', error);
+      }
+    };
+
+    initializePdf();
   }, []);
 
   // Annotation handlers

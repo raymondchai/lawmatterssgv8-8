@@ -40,7 +40,7 @@ interface LawFirmMapProps {
   className?: string;
 }
 
-export const LawFirmMap: React.FC<LawFirmMapProps> = ({
+const LawFirmMap: React.FC<LawFirmMapProps> = ({
   lawFirms,
   selectedFirm,
   onFirmSelect,

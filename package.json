@@ -58,6 +58,7 @@
     "@types/lodash": "^4.17.18",
     "@types/qrcode": "^1.5.5",
     "@types/speakeasy": "^2.0.10",
+    "buffer": "^6.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.0",
@@ -74,6 +75,7 @@
     "openai": "^5.5.1",
     "pdf-parse": "^1.1.1",
     "pdfjs-dist": "^5.3.31",
+    "process": "^0.11.10",
     "qrcode": "^1.5.4",
     "react": "^18.3.1",
     "react-day-picker": "^8.10.1",
@@ -89,6 +91,7 @@
     "tailwind-merge": "^2.5.2",
     "tailwindcss-animate": "^1.0.7",
     "tesseract.js": "^6.0.1",
+    "util": "^0.12.5",
     "uuid": "^10.0.0",
     "vaul": "^0.9.3",
     "zod": "^3.23.8"

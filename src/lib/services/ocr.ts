@@ -1,9 +1,3 @@
-import Tesseract from 'tesseract.js';
-import { getPdfJs } from '@/lib/config/pdfWorker';
-
-// Get configured PDF.js instance
-const pdfjsLib = getPdfJs();
-
 export interface OCRResult {
   text: string;
   confidence: number;
@@ -35,13 +29,21 @@ export async function extractTextFromPDF(
   onProgress?: (progress: OCRProgress) => void
 ): Promise<OCRResult> {
   const startTime = Date.now();
-  
+
   try {
     onProgress?.({
       status: 'initializing',
       progress: 0,
       message: 'Loading PDF...'
     });
+
+    // Dynamic import to avoid loading PDF.js when not needed
+    const { getPdfJs } = await import('@/lib/config/pdfWorker');
+    const pdfjsLib = await getPdfJs();
+
+    if (!pdfjsLib) {
+      throw new Error('PDF.js failed to load');
+    }
 
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
@@ -113,13 +115,16 @@ export async function extractTextFromImage(
   onProgress?: (progress: OCRProgress) => void
 ): Promise<OCRResult> {
   const startTime = Date.now();
-  
+
   try {
     onProgress?.({
       status: 'initializing',
       progress: 0,
       message: 'Initializing OCR...'
     });
+
+    // Dynamic import to avoid loading Tesseract.js when not needed
+    const Tesseract = await import('tesseract.js');
 
     const result = await Tesseract.recognize(file, 'eng', {
       logger: (m) => {

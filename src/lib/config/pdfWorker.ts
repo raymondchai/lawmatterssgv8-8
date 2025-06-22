@@ -1,22 +1,28 @@
-import * as pdfjs from 'pdfjs-dist';
-
-// Centralized PDF.js worker configuration
-const PDF_JS_VERSION = '3.11.174';
-const WORKER_SRC = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDF_JS_VERSION}/pdf.worker.min.js`;
-
+// Centralized PDF.js worker configuration with dynamic imports
 let workerInitialized = false;
+let pdfjsInstance: any = null;
 
-export const initializePdfWorker = () => {
-  if (!workerInitialized) {
-    pdfjs.GlobalWorkerOptions.workerSrc = WORKER_SRC;
-    workerInitialized = true;
-    console.log('PDF.js worker initialized with:', WORKER_SRC);
+export const initializePdfWorker = async () => {
+  if (!workerInitialized && typeof window !== 'undefined') {
+    try {
+      // Dynamic import to avoid loading PDF.js on server or when not needed
+      const pdfjs = await import('pdfjs-dist');
+      pdfjsInstance = pdfjs;
+
+      // Use the version that comes with react-pdf
+      const WORKER_SRC = new URL('pdfjs-dist/build/pdf.worker.min.js', import.meta.url).toString();
+      pdfjs.GlobalWorkerOptions.workerSrc = WORKER_SRC;
+      workerInitialized = true;
+      console.log('PDF.js worker initialized with:', WORKER_SRC);
+    } catch (error) {
+      console.error('Failed to initialize PDF.js worker:', error);
+    }
   }
 };
 
-export const getPdfJs = () => {
-  initializePdfWorker();
-  return pdfjs;
+export const getPdfJs = async () => {
+  if (!pdfjsInstance) {
+    await initializePdfWorker();
+  }
+  return pdfjsInstance;
 };
-
-export { pdfjs };

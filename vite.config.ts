@@ -6,8 +6,8 @@ import { componentTagger } from "lovable-tagger";
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   server: {
-    host: "::",
-    port: 8080,
+    host: "localhost",
+    port: 8081,
   },
   plugins: [
     react(),
@@ -17,6 +17,10 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      // Add polyfills for Node.js modules
+      "buffer": "buffer",
+      "process": "process/browser",
+      "util": "util",
     },
   },
   // Worker configuration
@@ -43,6 +47,11 @@ export default defineConfig(({ mode }) => ({
   // Optimize dependencies
   optimizeDeps: {
     include: ['react', 'react-dom', 'react-router-dom'],
-    exclude: ['tesseract.js'], // Exclude heavy OCR library from optimization
+    exclude: ['tesseract.js', 'pdfjs-dist'], // Exclude heavy libraries from optimization
+  },
+  // Handle Node.js polyfills and globals
+  define: {
+    global: 'globalThis',
+    'process.env': {},
   },
 }));

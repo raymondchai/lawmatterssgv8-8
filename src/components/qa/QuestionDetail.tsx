@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 import { legalQAApi } from '@/lib/api/legalQA';
 import type { LegalQuestion, LegalAnswer } from '@/types';
-import { toast } from '@/components/ui/sonner';
+import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatDistanceToNow } from 'date-fns';
 

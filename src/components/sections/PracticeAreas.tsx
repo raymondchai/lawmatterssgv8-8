@@ -2,6 +2,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Building2, FileText, MessageSquare, Download, Search, BookOpen } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const platformFeatures = [
   {
@@ -55,6 +56,8 @@ const platformFeatures = [
 ];
 
 export const PlatformFeatures = () => {
+  const navigate = useNavigate();
+
   return (
     <section id="features" className="py-20 bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -94,7 +97,7 @@ export const PlatformFeatures = () => {
                 <Button
                   variant="outline"
                   className="w-full group-hover:bg-blue-600 group-hover:text-white group-hover:border-blue-600 transition-colors"
-                  onClick={() => window.location.href = feature.link}
+                  onClick={() => navigate(feature.link)}
                 >
                   {feature.action}
                 </Button>

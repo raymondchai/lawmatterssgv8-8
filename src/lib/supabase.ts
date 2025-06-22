@@ -4,8 +4,15 @@ import type { Database } from '@/types/database';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+// Check if we're using placeholder values (development mode)
+const isPlaceholder = supabaseUrl?.includes('placeholder') || supabaseAnonKey?.includes('placeholder');
+
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
+}
+
+if (isPlaceholder) {
+  console.warn('Using placeholder Supabase configuration. Some features may not work properly.');
 }
 
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {

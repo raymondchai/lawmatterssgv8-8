@@ -1,5 +1,4 @@
 // OCR Web Worker to prevent main thread blocking
-import Tesseract from 'tesseract.js';
 
 export interface OCRWorkerMessage {
   type: 'PROCESS_IMAGE' | 'PROCESS_PDF_PAGE';
@@ -52,10 +51,13 @@ self.onmessage = async (event: MessageEvent<OCRWorkerMessage>) => {
 
 async function processImage(data: OCRWorkerMessage['data'], id: string) {
   const { imageData, options = {} } = data;
-  
+
   if (!imageData) {
     throw new Error('No image data provided');
   }
+
+  // Dynamic import to avoid loading Tesseract.js when not needed
+  const Tesseract = await import('tesseract.js');
 
   const worker = await Tesseract.createWorker({
     logger: (m) => {
@@ -93,10 +95,13 @@ async function processImage(data: OCRWorkerMessage['data'], id: string) {
 
 async function processPdfPage(data: OCRWorkerMessage['data'], id: string) {
   const { canvas, options = {} } = data;
-  
+
   if (!canvas) {
     throw new Error('No canvas data provided');
   }
+
+  // Dynamic import to avoid loading Tesseract.js when not needed
+  const Tesseract = await import('tesseract.js');
 
   const worker = await Tesseract.createWorker({
     logger: (m) => {

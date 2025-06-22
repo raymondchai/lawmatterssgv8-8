@@ -46,15 +46,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     // Get initial session
     const getInitialSession = async () => {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      if (error) {
-        console.error('Error getting session:', error);
-      } else {
-        setSession(session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          await loadProfile();
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error('Error getting session:', error);
+          // Don't throw error in development with placeholder config
+          if (!import.meta.env.VITE_SUPABASE_URL?.includes('placeholder')) {
+            throw error;
+          }
+        } else {
+          setSession(session);
+          setUser(session?.user ?? null);
+          if (session?.user) {
+            await loadProfile();
+          }
         }
+      } catch (error) {
+        console.error('Failed to initialize auth session:', error);
+        // Continue with null session in development
       }
       setLoading(false);
     };
@@ -62,22 +71,32 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     getInitialSession();
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          await loadProfile();
-        } else {
-          setProfile(null);
-        }
-        
-        setLoading(false);
-      }
-    );
+    let subscription: any = null;
+    try {
+      const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(
+        async (event, session) => {
+          setSession(session);
+          setUser(session?.user ?? null);
 
-    return () => subscription.unsubscribe();
+          if (session?.user) {
+            await loadProfile();
+          } else {
+            setProfile(null);
+          }
+
+          setLoading(false);
+        }
+      );
+      subscription = authSubscription;
+    } catch (error) {
+      console.error('Failed to set up auth state listener:', error);
+    }
+
+    return () => {
+      if (subscription) {
+        subscription.unsubscribe();
+      }
+    };
   }, []);
 
   const loadProfile = async () => {

@@ -49,6 +49,9 @@ export default function TemplateBrowser() {
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showFilters, setShowFilters] = useState(false);
+
+  // Ensure categories is always an array
+  const safeCategories = Array.isArray(categories) ? categories : [];
   
   // Search and filter state
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
@@ -244,13 +247,15 @@ export default function TemplateBrowser() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Categories</SelectItem>
-                {categories.map((category) => (
-                  <SelectItem key={category.id} value={category.id}>
-                    <div className="flex items-center gap-2">
-                      {getCategoryIcon(category.slug)}
-                      {category.name}
-                    </div>
-                  </SelectItem>
+                {safeCategories.map((category) => (
+                  category && category.id && category.name ? (
+                    <SelectItem key={category.id} value={category.id}>
+                      <div className="flex items-center gap-2">
+                        {getCategoryIcon(category.slug)}
+                        {category.name}
+                      </div>
+                    </SelectItem>
+                  ) : null
                 ))}
               </SelectContent>
             </Select>

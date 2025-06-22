@@ -35,6 +35,9 @@ export const TemplateManagement: React.FC = () => {
   const [selectedStatus, setSelectedStatus] = useState('');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
 
+  // Ensure categories is always an array
+  const safeCategories = Array.isArray(categories) ? categories : [];
+
   useEffect(() => {
     loadData();
   }, []);
@@ -191,10 +194,12 @@ export const TemplateManagement: React.FC = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="">All Categories</SelectItem>
-                {categories.map((category) => (
-                  <SelectItem key={category.id} value={category.id}>
-                    {category.name}
-                  </SelectItem>
+                {safeCategories.map((category) => (
+                  category && category.id && category.name ? (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name}
+                    </SelectItem>
+                  ) : null
                 ))}
               </SelectContent>
             </Select>
