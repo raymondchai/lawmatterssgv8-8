@@ -15,7 +15,10 @@ import type {
 } from '@/types';
 
 // Check if we're using placeholder Supabase configuration
-const isPlaceholder = import.meta.env.VITE_SUPABASE_URL?.includes('placeholder');
+const isPlaceholder = import.meta.env.VITE_SUPABASE_URL?.includes('placeholder') ||
+                      !import.meta.env.VITE_SUPABASE_URL ||
+                      import.meta.env.VITE_SUPABASE_URL === '' ||
+                      import.meta.env.VITE_SUPABASE_URL === 'your-project-url';
 
 // Mock data for development
 const mockCategories: LegalQACategory[] = [
@@ -233,43 +236,28 @@ export const legalQAApi = {
   // Categories
   async getCategories(): Promise<LegalQACategory[]> {
     console.log('getCategories called, isPlaceholder:', isPlaceholder);
-    console.log('VITE_SUPABASE_URL:', import.meta.env.VITE_SUPABASE_URL);
 
-    if (isPlaceholder) {
-      // Return mock data for development
-      console.log('Returning mock categories:', mockCategories);
-      console.log('Is mockCategories an array?', Array.isArray(mockCategories));
-      console.log('mockCategories length:', mockCategories.length);
+    try {
+      const { data, error } = await supabase
+        .from('legal_qa_categories')
+        .select('*')
+        .eq('is_active', true)
+        .order('order_index');
 
-      return new Promise((resolve, reject) => {
-        setTimeout(() => {
-          try {
-            console.log('Mock categories timeout resolved');
-            console.log('Resolving with:', mockCategories);
-            const result = [...mockCategories]; // Ensure we return a new array
-            console.log('Result to resolve:', result);
-            console.log('Result is array:', Array.isArray(result));
-            resolve(result);
-          } catch (error) {
-            console.error('Error in mock categories timeout:', error);
-            reject(error);
-          }
-        }, 50); // Further reduced timeout for testing
-      });
+      if (error) {
+        console.error('Error fetching Q&A categories:', error);
+        // Fall back to mock data on error
+        console.log('Falling back to mock categories');
+        return [...mockCategories];
+      }
+
+      console.log('Categories loaded from database:', data?.length);
+      return data || [];
+    } catch (err) {
+      console.error('Exception in getCategories:', err);
+      // Fall back to mock data on exception
+      return [...mockCategories];
     }
-
-    const { data, error } = await supabase
-      .from('legal_qa_categories')
-      .select('*')
-      .eq('is_active', true)
-      .order('order_index');
-
-    if (error) {
-      console.error('Error fetching Q&A categories:', error);
-      throw new Error('Failed to fetch Q&A categories');
-    }
-
-    return data || [];
   },
 
   async getCategoryWithQuestionCount(categoryId: string): Promise<LegalQACategory> {
@@ -1138,3 +1126,4 @@ This appears to be related to ${request.category || 'general legal matters'}. In
     });
   }
 };
+

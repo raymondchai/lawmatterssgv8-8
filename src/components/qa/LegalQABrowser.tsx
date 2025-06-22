@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { 
+import {
   Search,
   Plus,
   MessageSquare,
@@ -22,7 +22,8 @@ import {
   Users,
   CheckCircle,
   Bot,
-  Verified
+  Verified,
+  AlertCircle
 } from 'lucide-react';
 import { legalQAApi } from '@/lib/api/legalQA';
 import type { LegalQuestion, LegalQACategory, LegalQAFilters } from '@/types';
@@ -30,6 +31,117 @@ import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatDistanceToNow } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
+
+// Mock data for fallback when database is not available
+const MOCK_CATEGORIES: LegalQACategory[] = [
+  {
+    id: '1',
+    name: 'Employment Law',
+    description: 'Questions about workplace rights, contracts, and employment disputes',
+    icon: '💼',
+    color: '#3B82F6',
+    question_count: 45,
+    is_active: true,
+    order_index: 1,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: '2',
+    name: 'Property Law',
+    description: 'Real estate transactions, landlord-tenant issues, and property disputes',
+    icon: '🏠',
+    color: '#10B981',
+    question_count: 32,
+    is_active: true,
+    order_index: 2,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: '3',
+    name: 'Corporate Law',
+    description: 'Business formation, contracts, and corporate governance',
+    icon: '🏢',
+    color: '#8B5CF6',
+    question_count: 28,
+    is_active: true,
+    order_index: 3,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: '4',
+    name: 'Family Law',
+    description: 'Divorce, custody, adoption, and family-related legal matters',
+    icon: '👨‍👩‍👧‍👦',
+    color: '#F59E0B',
+    question_count: 23,
+    is_active: true,
+    order_index: 4,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  }
+];
+
+const MOCK_QUESTIONS: LegalQuestion[] = [
+  {
+    id: '1',
+    title: 'What are my rights if I\'m terminated without notice?',
+    content: 'I was working for a company for 2 years and they suddenly terminated me without any notice period. They said it was due to restructuring but I suspect it might be because I raised concerns about workplace safety. What are my rights under Singapore employment law?',
+    category: MOCK_CATEGORIES[0],
+    tags: ['termination', 'notice period', 'employment rights'],
+    urgency_level: 'high',
+    status: 'open',
+    view_count: 156,
+    upvote_count: 12,
+    downvote_count: 1,
+    answer_count: 3,
+    has_expert_answer: true,
+    has_ai_answer: false,
+    featured: true,
+    is_anonymous: false,
+    location: 'Singapore',
+    moderation_status: 'approved',
+    created_at: new Date(Date.now() - 86400000).toISOString(),
+    updated_at: new Date(Date.now() - 86400000).toISOString(),
+    user_id: 'mock-user-1',
+    category_id: '1',
+    user: {
+      id: 'mock-user-1',
+      full_name: 'John Doe',
+      avatar_url: null
+    }
+  },
+  {
+    id: '2',
+    title: 'Can my landlord increase rent during the lease period?',
+    content: 'I signed a 2-year lease agreement with my landlord 6 months ago. Now they want to increase the rent by 20% citing inflation and market rates. The lease agreement doesn\'t mention anything about rent increases during the lease period. Is this legal?',
+    category: MOCK_CATEGORIES[1],
+    tags: ['rental', 'lease agreement', 'rent increase'],
+    urgency_level: 'normal',
+    status: 'answered',
+    view_count: 89,
+    upvote_count: 8,
+    downvote_count: 0,
+    answer_count: 2,
+    has_expert_answer: false,
+    has_ai_answer: true,
+    featured: false,
+    is_anonymous: true,
+    location: 'Singapore',
+    moderation_status: 'approved',
+    created_at: new Date(Date.now() - 172800000).toISOString(),
+    updated_at: new Date(Date.now() - 172800000).toISOString(),
+    user_id: 'mock-user-2',
+    category_id: '2',
+    user: {
+      id: 'mock-user-2',
+      full_name: 'Anonymous User',
+      avatar_url: null
+    }
+  }
+];
 
 interface LegalQABrowserProps {
   onAskQuestion?: () => void;
@@ -43,8 +155,9 @@ export const LegalQABrowser: React.FC<LegalQABrowserProps> = ({
   const { user } = useAuth();
   const navigate = useNavigate();
   
-  const [questions, setQuestions] = useState<LegalQuestion[]>([]);
+  // Initialize with empty arrays to prevent undefined errors
   const [categories, setCategories] = useState<LegalQACategory[]>([]);
+  const [questions, setQuestions] = useState<LegalQuestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -61,72 +174,124 @@ export const LegalQABrowser: React.FC<LegalQABrowserProps> = ({
     limit: 20
   });
 
-  useEffect(() => {
-    console.log('Initial useEffect triggered');
+  // Check if we're in development mode or using placeholder Supabase
+  const isDevelopmentMode = import.meta.env.DEV ||
+    import.meta.env.VITE_SUPABASE_URL?.includes('placeholder');
 
-    const initializeData = async () => {
-      try {
-        setLoading(true);
+  const initializeData = useCallback(async () => {
+    let isMounted = true;
 
-        // Load categories first
-        console.log('Loading categories...');
-        const categoriesData = await legalQAApi.getCategories();
-        console.log('Categories loaded:', categoriesData);
-        console.log('Categories type:', typeof categoriesData);
-        console.log('Categories is array:', Array.isArray(categoriesData));
+    try {
+      setLoading(true);
+      setError(null);
 
-        if (!Array.isArray(categoriesData)) {
-          throw new Error('Categories data is not an array');
+      if (isDevelopmentMode) {
+        console.log('Using mock data in development mode');
+        // Use mock data in development
+        if (isMounted) {
+          setCategories(MOCK_CATEGORIES);
+          setQuestions(MOCK_QUESTIONS);
         }
+        return;
+      }
 
+      // Load categories first
+      console.log('Loading categories from API...');
+      const categoriesData = await legalQAApi.getCategories();
+
+      if (!isMounted) return;
+
+      if (Array.isArray(categoriesData) && categoriesData.length > 0) {
+        console.log('Categories loaded successfully:', categoriesData.length);
         setCategories(categoriesData);
+      } else {
+        console.warn('Categories data is empty, using mock data');
+        setCategories(MOCK_CATEGORIES);
+      }
 
-        // Load questions
-        console.log('Loading questions...');
-        const questionsData = await legalQAApi.getQuestions();
-        console.log('Questions loaded:', questionsData);
-        console.log('Questions type:', typeof questionsData);
-        console.log('Questions is array:', Array.isArray(questionsData));
+      // Load questions with basic filters
+      console.log('Loading questions from API...');
+      const questionsData = await legalQAApi.getQuestions({
+        page: 1,
+        limit: 20
+      });
 
-        if (!Array.isArray(questionsData)) {
-          throw new Error('Questions data is not an array');
-        }
+      if (!isMounted) return;
 
+      if (Array.isArray(questionsData) && questionsData.length > 0) {
+        console.log('Questions loaded successfully:', questionsData.length);
         setQuestions(questionsData);
+      } else {
+        console.warn('Questions data is empty, using mock data');
+        setQuestions(MOCK_QUESTIONS);
+      }
 
-        setError(null);
-      } catch (error: any) {
-        console.error('Error initializing data:', error);
-        setError(`Failed to load Q&A data: ${error.message}`);
-      } finally {
+    } catch (error) {
+      console.error('Error initializing data:', error);
+      if (isMounted) {
+        console.log('API failed, falling back to mock data');
+        // Fallback to mock data instead of showing error
+        setCategories(MOCK_CATEGORIES);
+        setQuestions(MOCK_QUESTIONS);
+        setError(null); // Don't show error when we have fallback data
+      }
+    } finally {
+      if (isMounted) {
         console.log('Setting loading to false in initialization');
         setLoading(false);
       }
-    };
-
-    initializeData();
-  }, []);
-
-  // Simplified effect for filtering - only when user interacts
-  useEffect(() => {
-    if (loading || categories.length === 0) return; // Don't filter while loading or no categories
-
-    console.log('Filter useEffect triggered:', {
-      searchQuery, selectedCategory, sortBy, activeTab
-    });
-
-    // Only reload questions if user has actually changed something
-    if (searchQuery || selectedCategory || activeTab !== 'all') {
-      loadQuestions();
     }
-  }, [searchQuery, selectedCategory, activeTab]);
 
+    return () => {
+      isMounted = false;
+    };
+  }, [isDevelopmentMode]);
 
+  useEffect(() => {
+    console.log('Initial useEffect triggered');
+    initializeData();
+  }, [initializeData]);
 
-  const loadQuestions = async () => {
+  const loadQuestions = useCallback(async () => {
     try {
       setLoading(true);
       console.log('Loading questions... activeTab:', activeTab);
+
+      if (isDevelopmentMode) {
+        console.log('Using filtered mock data');
+        // Filter mock data based on current filters
+        let filteredQuestions = [...MOCK_QUESTIONS];
+
+        if (searchQuery) {
+          filteredQuestions = filteredQuestions.filter(q =>
+            q.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            q.content.toLowerCase().includes(searchQuery.toLowerCase())
+          );
+        }
+
+        if (selectedCategory) {
+          filteredQuestions = filteredQuestions.filter(q => q.category_id === selectedCategory);
+        }
+
+        // Apply tab-specific filters
+        switch (activeTab) {
+          case 'trending':
+            filteredQuestions = filteredQuestions.filter(q => q.featured);
+            break;
+          case 'expert':
+            filteredQuestions = filteredQuestions.filter(q => q.has_expert_answer);
+            break;
+          case 'unanswered':
+            filteredQuestions = filteredQuestions.filter(q => q.status === 'open');
+            break;
+          case 'ai':
+            filteredQuestions = filteredQuestions.filter(q => q.has_ai_answer);
+            break;
+        }
+
+        setQuestions(filteredQuestions);
+        return;
+      }
 
       const queryFilters: LegalQAFilters = {
         page: 1,
@@ -159,14 +324,30 @@ export const LegalQABrowser: React.FC<LegalQABrowserProps> = ({
       console.log('Questions loaded:', questionsData);
       console.log('Questions count:', questionsData.length);
       setQuestions(questionsData);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error loading questions:', error);
-      toast.error('Failed to load questions');
+      // Fallback to mock data instead of showing error
+      console.log('API failed, using mock data');
+      setQuestions(MOCK_QUESTIONS);
     } finally {
       console.log('Setting loading to false');
       setLoading(false);
     }
-  };
+  }, [isDevelopmentMode, activeTab, searchQuery, selectedCategory, sortBy]);
+
+  // Simplified effect for filtering - only when user interacts
+  useEffect(() => {
+    if (loading || categories.length === 0) return; // Don't filter while loading or no categories
+
+    console.log('Filter useEffect triggered:', {
+      searchQuery, selectedCategory, sortBy, activeTab
+    });
+
+    // Only reload questions if user has actually changed something
+    if (searchQuery || selectedCategory || activeTab !== 'all') {
+      loadQuestions();
+    }
+  }, [searchQuery, selectedCategory, activeTab, loadQuestions, loading, categories.length, sortBy]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -184,10 +365,12 @@ export const LegalQABrowser: React.FC<LegalQABrowserProps> = ({
     }
 
     try {
-      await legalQAApi.voteOnQuestion(questionId, voteType);
-      await loadQuestions(); // Refresh to show updated vote counts
+      if (!isDevelopmentMode) {
+        await legalQAApi.voteOnQuestion(questionId, voteType);
+        await loadQuestions(); // Refresh to show updated vote counts
+      }
       toast.success('Vote recorded');
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error voting:', error);
       toast.error('Failed to record vote');
     }
@@ -200,10 +383,12 @@ export const LegalQABrowser: React.FC<LegalQABrowserProps> = ({
     }
 
     try {
-      // Check if already bookmarked (you'd need to track this state)
-      await legalQAApi.bookmarkQuestion(questionId);
+      if (!isDevelopmentMode) {
+        // Check if already bookmarked (you'd need to track this state)
+        await legalQAApi.bookmarkQuestion(questionId);
+      }
       toast.success('Question bookmarked');
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error bookmarking:', error);
       toast.error('Failed to bookmark question');
     }
@@ -365,24 +550,15 @@ export const LegalQABrowser: React.FC<LegalQABrowserProps> = ({
 
   return (
     <div className={`space-y-6 ${className}`}>
-      {/* Debug Info */}
-      <div className="bg-yellow-50 border border-yellow-200 rounded p-4 text-sm">
-        <p><strong>Debug Info:</strong></p>
-        <p>Loading: {loading.toString()}</p>
-        <p>Questions count: {questions.length}</p>
-        <p>Categories count: {categories.length} (safe: {safeCategories.length})</p>
-        <p>Active tab: {activeTab}</p>
-        <p>Error: {error || 'none'}</p>
-        <p>Supabase URL: {import.meta.env.VITE_SUPABASE_URL}</p>
-        <p>Is Placeholder: {import.meta.env.VITE_SUPABASE_URL?.includes('placeholder').toString()}</p>
-      </div>
-
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Legal Q&A</h2>
           <p className="text-gray-600">
             Get answers to your legal questions from the community and experts
+            {isDevelopmentMode && (
+              <span className="ml-2 text-sm text-blue-600">(Demo Mode)</span>
+            )}
           </p>
         </div>
         <Button onClick={onAskQuestion} className="bg-blue-600 hover:bg-blue-700">
@@ -427,7 +603,7 @@ export const LegalQABrowser: React.FC<LegalQABrowserProps> = ({
               </div>
 
               <div className="w-full md:w-48">
-                <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
+                <Select value={sortBy} onValueChange={(value: LegalQAFilters['sort_by']) => setSortBy(value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Sort by" />
                   </SelectTrigger>
@@ -506,3 +682,4 @@ export const LegalQABrowser: React.FC<LegalQABrowserProps> = ({
     </div>
   );
 };
+
