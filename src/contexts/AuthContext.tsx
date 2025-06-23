@@ -1,9 +1,10 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { profilesApi } from '@/lib/api/profiles';
 import { twoFactorService } from '@/lib/services/twoFactor';
 import { sessionSecurityService } from '@/lib/services/sessionSecurity';
+import { authConfig } from '@/lib/auth/config';
 import type { User as ProfileUser } from '@/types';
 
 interface AuthContextType {
@@ -48,24 +49,68 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const getInitialSession = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
+
         if (error) {
           console.error('Error getting session:', error);
           // Don't throw error in development with placeholder config
           if (!import.meta.env.VITE_SUPABASE_URL?.includes('placeholder')) {
             throw error;
           }
-        } else {
-          setSession(session);
-          setUser(session?.user ?? null);
-          if (session?.user) {
-            await loadProfile();
+        }
+
+        // Validate session if it exists
+        if (session) {
+          // Check if session is still valid by making a test API call
+          try {
+            const { data: { user }, error: userError } = await supabase.auth.getUser();
+            if (userError || !user) {
+              // Session is invalid, clear it
+              console.log('Invalid session detected, clearing...');
+              await supabase.auth.signOut();
+              setSession(null);
+              setUser(null);
+              setProfile(null);
+            } else {
+              // Session is valid
+              setSession(session);
+              setUser(user);
+            }
+          } catch (validationError) {
+            console.error('Session validation failed:', validationError);
+            // Clear invalid session
+            await supabase.auth.signOut();
+            setSession(null);
+            setUser(null);
+            setProfile(null);
           }
+        } else {
+          // No session
+          setSession(null);
+          setUser(null);
+          setProfile(null);
+        }
+
+        if (session?.user) {
+          try {
+            await loadProfile();
+          } catch (profileError) {
+            console.error('Error loading profile during initialization:', profileError);
+            // Continue without profile
+          }
+        } else {
+          // Explicitly set profile to null when no user
+          setProfile(null);
         }
       } catch (error) {
         console.error('Failed to initialize auth session:', error);
-        // Continue with null session in development
+        // Ensure clean state on error
+        setSession(null);
+        setUser(null);
+        setProfile(null);
+      } finally {
+        // Always set loading to false, regardless of success or failure
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     getInitialSession();
@@ -75,11 +120,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(
         async (event, session) => {
+          console.log('Auth state change:', event, session?.user?.email || 'no user');
+
           setSession(session);
           setUser(session?.user ?? null);
 
           if (session?.user) {
-            await loadProfile();
+            try {
+              await loadProfile();
+            } catch (profileError) {
+              console.error('Error loading profile during auth change:', profileError);
+              // Continue without profile
+            }
           } else {
             setProfile(null);
           }
@@ -90,6 +142,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       subscription = authSubscription;
     } catch (error) {
       console.error('Failed to set up auth state listener:', error);
+      // Ensure loading is set to false even if listener setup fails
+      setLoading(false);
     }
 
     return () => {
@@ -105,8 +159,35 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setProfile(profileData);
     } catch (error) {
       console.error('Error loading profile:', error);
-      // Profile might not exist yet for new users
-      setProfile(null);
+      // Profile might not exist yet for new users - create one
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          // Try to create a basic profile
+          const { data: newProfile, error: createError } = await supabase
+            .from('profiles')
+            .insert({
+              id: user.id,
+              email: user.email ?? '',
+              first_name: user.user_metadata?.first_name ?? null,
+              last_name: user.user_metadata?.last_name ?? null,
+            })
+            .select()
+            .single();
+
+          if (!createError && newProfile) {
+            setProfile(newProfile);
+          } else {
+            console.error('Error creating profile:', createError);
+            setProfile(null);
+          }
+        } else {
+          setProfile(null);
+        }
+      } catch (createError) {
+        console.error('Error creating profile:', createError);
+        setProfile(null);
+      }
     }
   };
 
@@ -180,7 +261,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       email,
       password,
       options: {
-        data: metadata
+        data: metadata,
+        ...authConfig.getSignUpOptions()
       }
     });
     if (error) throw error;
@@ -202,9 +284,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const resetPassword = async (email: string) => {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/reset-password`,
-    });
+    const { error } = await supabase.auth.resetPasswordForEmail(email,
+      authConfig.getPasswordResetOptions()
+    );
     if (error) throw error;
   };
 
@@ -253,7 +335,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return user ? twoFactorService.isTwoFactorEnabled(user) : false;
   };
 
-  const value: AuthContextType = {
+  const value: AuthContextType = useMemo(() => ({
     user,
     profile,
     session,
@@ -267,7 +349,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     refreshProfile,
     verifyTwoFactor,
     isTwoFactorEnabled,
-  };
+  }), [
+    user,
+    profile,
+    session,
+    loading,
+    requiresTwoFactor,
+    signIn,
+    signUp,
+    signOut,
+    resetPassword,
+    updatePassword,
+    refreshProfile,
+    verifyTwoFactor,
+    isTwoFactorEnabled,
+  ]);
 
   return (
     <AuthContext.Provider value={value}>

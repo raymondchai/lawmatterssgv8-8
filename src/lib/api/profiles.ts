@@ -4,11 +4,16 @@ import type { User } from '@/types';
 export const profilesApi = {
   // Get current user profile
   async getCurrentProfile() {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError) throw userError;
+    if (!user) throw new Error('User not authenticated');
+
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
+      .eq('id', user.id)
       .single();
-    
+
     if (error) throw error;
     return data as User;
   },
@@ -27,9 +32,14 @@ export const profilesApi = {
 
   // Get user usage statistics
   async getUserUsage() {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError) throw userError;
+    if (!user) throw new Error('User not authenticated');
+
     const { data, error } = await supabase
       .from('user_usage')
       .select('*')
+      .eq('user_id', user.id)
       .single();
 
     if (error) throw error;

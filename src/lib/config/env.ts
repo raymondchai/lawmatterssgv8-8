@@ -84,7 +84,7 @@ function getEnvVar(key: string, defaultValue?: string): string {
   if (value === undefined && defaultValue === undefined) {
     throw new Error(`Environment variable ${key} is required but not set`);
   }
-  return value || defaultValue || '';
+  return value ?? defaultValue ?? '';
 }
 
 /**
@@ -146,8 +146,8 @@ export const config: AppConfig = {
   
   app: {
     name: getEnvVar('VITE_APP_NAME', 'LawMattersSG'),
-    url: getEnvVar('VITE_APP_URL', 'http://localhost:5173'),
-    apiUrl: getEnvVar('VITE_API_URL', 'http://localhost:5173/api'),
+    url: getEnvVar('VITE_APP_URL', 'http://localhost:8082'),
+    apiUrl: getEnvVar('VITE_API_URL', 'http://localhost:8082/api'),
     environment: getEnvVar('VITE_ENVIRONMENT', 'development') as 'development' | 'staging' | 'production',
   },
   

@@ -13,6 +13,7 @@ import Documents from "./pages/Documents";
 import LegalQA from "./pages/LegalQA";
 import { QuestionDetail } from "./components/qa";
 import Login from "./pages/auth/Login";
+import Debug from "./pages/Debug";
 import Register from "./pages/auth/Register";
 import ForgotPassword from "./pages/auth/ForgotPassword";
 import ResetPassword from "./pages/auth/ResetPassword";
@@ -65,6 +66,7 @@ const App = () => {
               <Route path={ROUTES.register} element={<Register />} />
               <Route path={ROUTES.forgotPassword} element={<ForgotPassword />} />
               <Route path={ROUTES.resetPassword} element={<ResetPassword />} />
+              <Route path="/debug" element={<Debug />} />
               <Route path={ROUTES.dashboard} element={<Dashboard />} />
               <Route path={ROUTES.documents} element={<DashboardDocuments />} />
               <Route path="/dashboard/ai-assistant" element={<AIAssistant />} />

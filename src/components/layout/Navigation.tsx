@@ -5,13 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu, User, Building2, FileText, MessageSquare, Search } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 export const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearch, setShowSearch] = useState(false);
   const navigate = useNavigate();
-  const user = null; // Temporarily disable auth
+  const { user, loading } = useAuth();
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,7 +102,12 @@ export const Navigation = () => {
 
           {/* CTA Buttons */}
           <div className="hidden lg:flex items-center space-x-4">
-            {user ? (
+            {loading ? (
+              <div className="flex items-center space-x-2">
+                <div className="w-20 h-9 bg-gray-200 animate-pulse rounded"></div>
+                <div className="w-24 h-9 bg-gray-200 animate-pulse rounded"></div>
+              </div>
+            ) : user ? (
               <Button
                 onClick={() => navigate('/dashboard')}
                 className="bg-blue-600 hover:bg-blue-700"
@@ -170,7 +176,12 @@ export const Navigation = () => {
                     </Link>
                   ))}
                   <div className="border-t pt-4 mt-4">
-                    {user ? (
+                    {loading ? (
+                      <div className="space-y-2 mt-4">
+                        <div className="w-full h-9 bg-gray-200 animate-pulse rounded"></div>
+                        <div className="w-full h-9 bg-gray-200 animate-pulse rounded"></div>
+                      </div>
+                    ) : user ? (
                       <Button
                         onClick={() => {
                           navigate('/dashboard');

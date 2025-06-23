@@ -49,7 +49,10 @@ class WebSocketService {
   private userId: string | null = null;
 
   constructor() {
-    this.setupAuthListener();
+    // Only set up auth listener in production
+    if (!import.meta.env.DEV) {
+      this.setupAuthListener();
+    }
   }
 
   private setupAuthListener() {
@@ -276,12 +279,13 @@ class WebSocketService {
 export const webSocketService = new WebSocketService();
 
 // Mock WebSocket implementation for development
-class MockWebSocketService extends WebSocketService {
+class MockWebSocketService {
   private mockTimers: NodeJS.Timeout[] = [];
+  private handlers: Map<string, WebSocketEventHandler[]> = new Map();
 
   async connect(): Promise<void> {
     console.log('Mock WebSocket: Connected');
-    
+
     // Simulate connection delay
     setTimeout(() => {
       console.log('Mock WebSocket: Authentication successful');
@@ -292,6 +296,44 @@ class MockWebSocketService extends WebSocketService {
     console.log('Mock WebSocket: Disconnected');
     this.mockTimers.forEach(timer => clearTimeout(timer));
     this.mockTimers = [];
+  }
+
+  send(message: WebSocketMessage): void {
+    console.log('Mock WebSocket: Sending message', message);
+  }
+
+  subscribe(type: string, handler: WebSocketEventHandler): () => void {
+    console.log(`Mock WebSocket: Subscribing to ${type}`);
+
+    if (!this.handlers.has(type)) {
+      this.handlers.set(type, []);
+    }
+
+    this.handlers.get(type)!.push(handler);
+
+    // Return unsubscribe function
+    return () => {
+      const handlers = this.handlers.get(type);
+      if (handlers) {
+        const index = handlers.indexOf(handler);
+        if (index > -1) {
+          handlers.splice(index, 1);
+        }
+      }
+    };
+  }
+
+  private handleMessage(message: WebSocketMessage): void {
+    const handlers = this.handlers.get(message.type) || [];
+    const allHandlers = this.handlers.get('all') || [];
+
+    [...handlers, ...allHandlers].forEach(handler => {
+      try {
+        handler(message);
+      } catch (error) {
+        console.error('Error in WebSocket message handler:', error);
+      }
+    });
   }
 
   // Simulate document processing updates

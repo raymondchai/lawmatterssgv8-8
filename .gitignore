@@ -12,6 +12,13 @@ dist
 dist-ssr
 *.local
 
+# Package manager lockfiles (keep only npm)
+# Ignore other package manager lockfiles to prevent conflicts
+yarn.lock
+pnpm-lock.yaml
+bun.lockb
+.pnpm-store
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

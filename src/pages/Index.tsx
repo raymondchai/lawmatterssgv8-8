@@ -8,6 +8,7 @@ import { AboutSection } from "@/components/sections/AboutSection";
 import { Testimonials } from "@/components/sections/Testimonials";
 import { ContactSection } from "@/components/sections/ContactSection";
 import { Footer } from "@/components/layout/Footer";
+import { AuthDebug } from "@/components/debug/AuthDebug";
 
 const Index = () => {
   return (
@@ -21,6 +22,7 @@ const Index = () => {
       <Testimonials />
       <ContactSection />
       <Footer />
+      <AuthDebug />
     </div>
   );
 };
