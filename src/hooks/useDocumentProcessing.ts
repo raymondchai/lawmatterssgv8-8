@@ -163,10 +163,20 @@ export function useDocument(id: string) {
  */
 export function useDocumentSearch() {
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   const searchResults = useQuery({
     queryKey: ['documents', 'search', searchQuery],
-    queryFn: () => documentsApi.searchDocuments(searchQuery),
+    queryFn: async () => {
+      if (!searchQuery || searchQuery.length < 3) {
+        return [];
+      }
+      try {
+        return await documentsApi.searchDocuments(searchQuery);
+      } catch (error) {
+        console.error('Search error:', error);
+        return [];
+      }
+    },
     enabled: searchQuery.length > 2,
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
@@ -338,24 +348,36 @@ export function useDocumentStats() {
   return useQuery({
     queryKey: ['documents', 'stats'],
     queryFn: async () => {
-      const documents = await documentsApi.getDocuments();
-      const usage = await documentsApi.getDocumentUsage();
-      
-      const stats = {
-        total: documents.length,
-        byStatus: documents.reduce((acc, doc) => {
-          acc[doc.processing_status] = (acc[doc.processing_status] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>),
-        byType: documents.reduce((acc, doc) => {
-          acc[doc.document_type] = (acc[doc.document_type] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>),
-        totalSize: documents.reduce((acc, doc) => acc + doc.file_size, 0),
-        usage
-      };
-      
-      return stats;
+      try {
+        const documents = await documentsApi.getDocuments();
+        const usage = await documentsApi.getDocumentUsage();
+
+        const stats = {
+          total: documents.length,
+          byStatus: documents.reduce((acc, doc) => {
+            acc[doc.processing_status] = (acc[doc.processing_status] || 0) + 1;
+            return acc;
+          }, {} as Record<string, number>),
+          byType: documents.reduce((acc, doc) => {
+            acc[doc.document_type] = (acc[doc.document_type] || 0) + 1;
+            return acc;
+          }, {} as Record<string, number>),
+          totalSize: documents.reduce((acc, doc) => acc + doc.file_size, 0),
+          usage
+        };
+
+        return stats;
+      } catch (error) {
+        console.error('Error fetching document stats:', error);
+        // Return default stats on error
+        return {
+          total: 0,
+          byStatus: {},
+          byType: {},
+          totalSize: 0,
+          usage: null
+        };
+      }
     },
     staleTime: 10 * 60 * 1000, // 10 minutes
   });

@@ -373,10 +373,7 @@ export const legalQAApi = {
       .select(`
         *,
         user:profiles(id, full_name, avatar_url),
-        category:legal_qa_categories(id, name, color),
-        answer_count,
-        has_expert_answer,
-        has_ai_answer
+        category:legal_qa_categories(id, name, color)
       `)
       .eq('moderation_status', 'approved');
 

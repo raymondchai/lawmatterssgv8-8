@@ -6,6 +6,7 @@ import { DocumentViewer } from '@/components/legal/DocumentViewer';
 import { DocumentSearch } from '@/components/legal/DocumentSearch';
 import { DocumentStatusTracker } from '@/components/legal/DocumentStatusTracker';
 import DocumentManagementDashboard from '@/components/documents/DocumentManagementDashboard';
+import ErrorBoundary from '@/components/ErrorBoundary';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -270,7 +271,9 @@ const Documents: React.FC = () => {
 
                 <TabsContent value="enhanced" className="space-y-6">
                   {/* Enhanced Document Management Dashboard */}
-                  <DocumentManagementDashboard />
+                  <ErrorBoundary>
+                    <DocumentManagementDashboard />
+                  </ErrorBoundary>
                 </TabsContent>
               </Tabs>
             )}

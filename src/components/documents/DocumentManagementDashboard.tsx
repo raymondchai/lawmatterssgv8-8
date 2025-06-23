@@ -64,66 +64,89 @@ const DocumentManagementDashboard: React.FC = () => {
   });
   const [showUpload, setShowUpload] = useState(false);
 
-  // Hooks
+  // Hooks with error handling
   const { data: documents = [], isLoading, error } = useDocuments();
   const { searchQuery, setSearchQuery, searchResults, isSearching } = useDocumentSearch();
   const deleteDocument = useDocumentDeletion();
   const downloadDocument = useDocumentDownload();
   const { bulkDelete, isBulkDeleting } = useBulkDocumentOperations();
-  const { data: stats } = useDocumentStats();
+  const { data: stats, error: statsError } = useDocumentStats();
+
+  // Debug logging
+  React.useEffect(() => {
+    if (error) {
+      console.error('Documents loading error:', error);
+    }
+    if (statsError) {
+      console.error('Stats loading error:', statsError);
+    }
+  }, [error, statsError]);
 
   // Filtered and sorted documents
   const filteredDocuments = useMemo(() => {
-    let result = searchQuery.length > 2 ? searchResults : documents;
+    try {
+      let result = searchQuery.length > 2 ? searchResults : documents;
 
-    // Apply filters
-    if (filters.status !== 'all') {
-      result = result.filter(doc => doc.processing_status === filters.status);
-    }
-    if (filters.type !== 'all') {
-      result = result.filter(doc => doc.document_type === filters.type);
-    }
-    if (filters.dateRange !== 'all') {
-      const now = new Date();
-      const cutoff = new Date();
-      switch (filters.dateRange) {
-        case 'today':
-          cutoff.setHours(0, 0, 0, 0);
-          break;
-        case 'week':
-          cutoff.setDate(now.getDate() - 7);
-          break;
-        case 'month':
-          cutoff.setMonth(now.getMonth() - 1);
-          break;
-      }
-      result = result.filter(doc => new Date(doc.created_at) >= cutoff);
-    }
-
-    // Sort documents
-    result.sort((a, b) => {
-      let aValue: any = a[sortField];
-      let bValue: any = b[sortField];
-
-      if (sortField === 'created_at') {
-        aValue = new Date(aValue).getTime();
-        bValue = new Date(bValue).getTime();
-      } else if (sortField === 'file_size') {
-        aValue = Number(aValue);
-        bValue = Number(bValue);
-      } else {
-        aValue = String(aValue).toLowerCase();
-        bValue = String(bValue).toLowerCase();
+      // Ensure result is an array
+      if (!Array.isArray(result)) {
+        console.warn('Documents result is not an array:', result);
+        return [];
       }
 
-      if (sortOrder === 'asc') {
-        return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
-      } else {
-        return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
+      // Apply filters
+      if (filters.status !== 'all') {
+        result = result.filter(doc => doc?.processing_status === filters.status);
       }
-    });
+      if (filters.type !== 'all') {
+        result = result.filter(doc => doc?.document_type === filters.type);
+      }
+      if (filters.dateRange !== 'all') {
+        const now = new Date();
+        const cutoff = new Date();
+        switch (filters.dateRange) {
+          case 'today':
+            cutoff.setHours(0, 0, 0, 0);
+            break;
+          case 'week':
+            cutoff.setDate(now.getDate() - 7);
+            break;
+          case 'month':
+            cutoff.setMonth(now.getMonth() - 1);
+            break;
+        }
+        result = result.filter(doc => doc?.created_at && new Date(doc.created_at) >= cutoff);
+      }
 
-    return result;
+      // Sort documents
+      result.sort((a, b) => {
+        if (!a || !b) return 0;
+
+        let aValue: any = a[sortField];
+        let bValue: any = b[sortField];
+
+        if (sortField === 'created_at') {
+          aValue = new Date(aValue).getTime();
+          bValue = new Date(bValue).getTime();
+        } else if (sortField === 'file_size') {
+          aValue = Number(aValue) || 0;
+          bValue = Number(bValue) || 0;
+        } else {
+          aValue = String(aValue || '').toLowerCase();
+          bValue = String(bValue || '').toLowerCase();
+        }
+
+        if (sortOrder === 'asc') {
+          return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+        } else {
+          return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
+        }
+      });
+
+      return result;
+    } catch (error) {
+      console.error('Error filtering documents:', error);
+      return [];
+    }
   }, [documents, searchResults, searchQuery, filters, sortField, sortOrder]);
 
   // Selection handlers
@@ -432,19 +455,26 @@ const DocumentManagementDashboard: React.FC = () => {
             </div>
           )}
 
-          {filteredDocuments.map((document) => (
-            <DocumentCard
-              key={document.id}
-              document={document}
-              viewMode={viewMode}
-              isSelected={selectedDocuments.has(document.id)}
-              onToggleSelection={() => toggleDocumentSelection(document.id)}
-              onDownload={() => handleDownload(document.id)}
-              onDelete={() => handleDelete(document.id)}
-              getStatusIcon={getStatusIcon}
-              getStatusColor={getStatusColor}
-            />
-          ))}
+          {filteredDocuments.map((document) => {
+            if (!document || !document.id) {
+              console.warn('Invalid document found:', document);
+              return null;
+            }
+
+            return (
+              <DocumentCard
+                key={document.id}
+                document={document}
+                viewMode={viewMode}
+                isSelected={selectedDocuments.has(document.id)}
+                onToggleSelection={() => toggleDocumentSelection(document.id)}
+                onDownload={() => handleDownload(document.id)}
+                onDelete={() => handleDelete(document.id)}
+                getStatusIcon={getStatusIcon}
+                getStatusColor={getStatusColor}
+              />
+            );
+          }).filter(Boolean)}
         </div>
       )}
     </div>
@@ -473,6 +503,21 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
   getStatusIcon,
   getStatusColor
 }) => {
+  // Safety checks
+  if (!document) {
+    console.warn('DocumentCard received null/undefined document');
+    return null;
+  }
+
+  const safeDocument = {
+    id: document.id || '',
+    filename: document.filename || 'Unknown File',
+    document_type: document.document_type || 'other',
+    file_size: document.file_size || 0,
+    created_at: document.created_at || new Date().toISOString(),
+    processing_status: document.processing_status || 'pending'
+  };
+
   if (viewMode === 'list') {
     return (
       <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50">
@@ -482,17 +527,17 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
         />
         <FileText className="h-5 w-5 text-gray-400" />
         <div className="flex-1 min-w-0">
-          <p className="font-medium truncate">{document.filename}</p>
+          <p className="font-medium truncate">{safeDocument.filename}</p>
           <p className="text-sm text-gray-500">
-            {DOCUMENT_TYPES[document.document_type as keyof typeof DOCUMENT_TYPES]} • 
-            {(document.file_size / 1024 / 1024).toFixed(2)} MB • 
-            {formatDistanceToNow(new Date(document.created_at), { addSuffix: true })}
+            {DOCUMENT_TYPES[safeDocument.document_type as keyof typeof DOCUMENT_TYPES] || 'Unknown'} •
+            {(safeDocument.file_size / 1024 / 1024).toFixed(2)} MB •
+            {formatDistanceToNow(new Date(safeDocument.created_at), { addSuffix: true })}
           </p>
         </div>
         <div className="flex items-center space-x-2">
-          <Badge className={getStatusColor(document.processing_status)}>
-            {getStatusIcon(document.processing_status)}
-            <span className="ml-1">{PROCESSING_STATUS[document.processing_status as keyof typeof PROCESSING_STATUS]}</span>
+          <Badge className={getStatusColor(safeDocument.processing_status)}>
+            {getStatusIcon(safeDocument.processing_status)}
+            <span className="ml-1">{PROCESSING_STATUS[safeDocument.processing_status as keyof typeof PROCESSING_STATUS] || 'Unknown'}</span>
           </Badge>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -547,30 +592,30 @@ const DocumentCard: React.FC<DocumentCardProps> = ({
         
         <div className="text-center mb-4">
           <FileText className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-          <h3 className="font-medium truncate" title={document.filename}>
-            {document.filename}
+          <h3 className="font-medium truncate" title={safeDocument.filename}>
+            {safeDocument.filename}
           </h3>
         </div>
-        
+
         <div className="space-y-2 text-sm text-gray-600">
           <div className="flex justify-between">
             <span>Type:</span>
-            <span>{DOCUMENT_TYPES[document.document_type as keyof typeof DOCUMENT_TYPES]}</span>
+            <span>{DOCUMENT_TYPES[safeDocument.document_type as keyof typeof DOCUMENT_TYPES] || 'Unknown'}</span>
           </div>
           <div className="flex justify-between">
             <span>Size:</span>
-            <span>{(document.file_size / 1024 / 1024).toFixed(2)} MB</span>
+            <span>{(safeDocument.file_size / 1024 / 1024).toFixed(2)} MB</span>
           </div>
           <div className="flex justify-between">
             <span>Uploaded:</span>
-            <span>{formatDistanceToNow(new Date(document.created_at), { addSuffix: true })}</span>
+            <span>{formatDistanceToNow(new Date(safeDocument.created_at), { addSuffix: true })}</span>
           </div>
         </div>
-        
+
         <div className="mt-3">
-          <Badge className={`w-full justify-center ${getStatusColor(document.processing_status)}`}>
-            {getStatusIcon(document.processing_status)}
-            <span className="ml-1">{PROCESSING_STATUS[document.processing_status as keyof typeof PROCESSING_STATUS]}</span>
+          <Badge className={`w-full justify-center ${getStatusColor(safeDocument.processing_status)}`}>
+            {getStatusIcon(safeDocument.processing_status)}
+            <span className="ml-1">{PROCESSING_STATUS[safeDocument.processing_status as keyof typeof PROCESSING_STATUS] || 'Unknown'}</span>
           </Badge>
         </div>
       </CardContent>
