@@ -14,6 +14,14 @@ export const Navigation = () => {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
 
+  // Debug logging
+  console.log('Navigation - Auth state:', {
+    user: user?.email || 'No user',
+    loading,
+    hasUser: !!user,
+    timestamp: new Date().toISOString()
+  });
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
@@ -100,8 +108,14 @@ export const Navigation = () => {
             </div>
           </div>
 
-          {/* CTA Buttons */}
-          <div className="hidden lg:flex items-center space-x-4">
+          {/* CTA Buttons - Always show for debugging */}
+          <div className="flex items-center space-x-2 flex-shrink-0">
+            {/* Debug indicator */}
+            {import.meta.env.DEV && (
+              <div className="text-xs text-gray-500 mr-2">
+                {loading ? 'Loading...' : user ? `User: ${user.email}` : 'No user'}
+              </div>
+            )}
             {loading ? (
               <div className="flex items-center space-x-2">
                 <div className="w-20 h-9 bg-gray-200 animate-pulse rounded"></div>
@@ -119,13 +133,16 @@ export const Navigation = () => {
               <div className="flex items-center space-x-2">
                 <Button
                   variant="outline"
+                  size="sm"
                   onClick={() => navigate('/auth/login')}
+                  className="text-xs px-2 py-1 whitespace-nowrap"
                 >
                   Sign In
                 </Button>
                 <Button
+                  size="sm"
                   onClick={() => navigate('/auth/register')}
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="bg-blue-600 hover:bg-blue-700 text-xs px-2 py-1 whitespace-nowrap"
                 >
                   Get Started
                 </Button>
@@ -134,7 +151,7 @@ export const Navigation = () => {
           </div>
 
           {/* Mobile menu button */}
-          <div className="md:hidden">
+          <div className="sm:hidden">
             <Sheet open={isOpen} onOpenChange={setIsOpen}>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon">

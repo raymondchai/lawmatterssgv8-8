@@ -47,6 +47,17 @@ export function useRealTimeStatus(): RealTimeStatus {
   });
 
   useEffect(() => {
+    // Skip realtime connections in development to avoid console errors
+    if (import.meta.env.DEV) {
+      console.log('Skipping realtime connections in development');
+      setStatus({
+        isConnected: false,
+        connectionState: 'disabled',
+        lastUpdate: null
+      });
+      return;
+    }
+
     // Connect to WebSocket
     realtimeService.connect();
 

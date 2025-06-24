@@ -5,20 +5,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { 
-  FileText, 
-  Upload, 
-  Search, 
-  Download, 
+import ProductionDiagnostics from '@/components/debug/ProductionDiagnostics';
+import {
+  Upload,
+  Search,
+  Download,
   Eye,
   Sparkles,
   Shield,
-  Clock,
   CheckCircle
 } from 'lucide-react';
 
 const Documents = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [showDebug, setShowDebug] = useState(false);
 
   // Mock data for document templates
   const documentTemplates = [
@@ -254,6 +254,36 @@ const Documents = () => {
           </div>
         </div>
       </section>
+
+      {/* Debug Panel */}
+      {showDebug && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-auto">
+            <div className="p-4 border-b flex justify-between items-center">
+              <h3 className="text-lg font-semibold">Debug Tools - Public Documents Page</h3>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowDebug(false)}
+              >
+                Close
+              </Button>
+            </div>
+            <div className="p-4">
+              <ProductionDiagnostics />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Debug Button */}
+      <Button
+        onClick={() => setShowDebug(true)}
+        className="fixed bottom-4 right-4 z-[9999] bg-red-600 hover:bg-red-700 text-white shadow-lg border-2 border-white"
+        size="sm"
+      >
+        🐛 Debug
+      </Button>
 
       <Footer />
     </div>

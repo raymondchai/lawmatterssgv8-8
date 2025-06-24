@@ -152,20 +152,37 @@ Object.defineProperty(navigator, 'share', {
   writable: true,
 });
 
-// Suppress console errors during tests (optional)
+// Suppress console errors and warnings during tests (optional)
 const originalError = console.error;
+const originalWarn = console.warn;
+
 beforeAll(() => {
   console.error = (...args: any[]) => {
     if (
       typeof args[0] === 'string' &&
-      args[0].includes('Warning: ReactDOM.render is no longer supported')
+      (args[0].includes('Warning: ReactDOM.render is no longer supported') ||
+       args[0].includes('Warning: An update to') ||
+       args[0].includes('act(...)'))
     ) {
       return;
     }
     originalError.call(console, ...args);
   };
+
+  console.warn = (...args: any[]) => {
+    if (
+      typeof args[0] === 'string' &&
+      (args[0].includes('Warning: An update to') ||
+       args[0].includes('act(...)') ||
+       args[0].includes('Warning: Encountered two children with the same key'))
+    ) {
+      return;
+    }
+    originalWarn.call(console, ...args);
+  };
 });
 
 afterAll(() => {
   console.error = originalError;
+  console.warn = originalWarn;
 });

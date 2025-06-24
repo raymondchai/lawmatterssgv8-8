@@ -236,7 +236,9 @@ describe('TemplateBrowser', () => {
 
     // Click on a template
     const templateCard = screen.getByText('Business Agreement Template').closest('div');
-    fireEvent.click(templateCard!);
+    if (templateCard) {
+      fireEvent.click(templateCard);
+    }
 
     // Check if analytics event was tracked
     expect(templateMarketplaceService.trackEvent).toHaveBeenCalledWith(
@@ -263,12 +265,41 @@ describe('TemplateBrowser', () => {
   });
 
   it('should handle load more functionality', async () => {
-    // Mock hasMore as true
-    vi.mocked(templateMarketplaceService.searchTemplates).mockResolvedValue({
-      templates: mockTemplates,
-      total: 50,
-      hasMore: true
-    });
+    // Mock initial load
+    vi.mocked(templateMarketplaceService.searchTemplates)
+      .mockResolvedValueOnce({
+        templates: mockTemplates,
+        total: 50,
+        hasMore: true
+      })
+      // Mock load more with different templates to avoid duplicate keys
+      .mockResolvedValueOnce({
+        templates: [
+          {
+            id: 'template-3',
+            title: 'Additional Template',
+            slug: 'additional-template',
+            description: 'An additional template for testing',
+            categoryId: 'business',
+            accessLevel: 'public' as const,
+            tags: ['business', 'additional'],
+            price: 0,
+            rating: 4.5,
+            reviewCount: 10,
+            downloadCount: 50,
+            isFeatured: false,
+            createdAt: '2024-01-01T00:00:00Z',
+            updatedAt: '2024-01-01T00:00:00Z',
+            category: {
+              id: 'business',
+              name: 'Business',
+              description: 'Business templates'
+            }
+          }
+        ],
+        total: 50,
+        hasMore: false
+      });
 
     renderTemplateBrowser();
 
@@ -286,6 +317,11 @@ describe('TemplateBrowser', () => {
           offset: 20
         })
       );
+    });
+
+    // Verify the additional template is loaded
+    await waitFor(() => {
+      expect(screen.getByText('Additional Template')).toBeInTheDocument();
     });
   });
 

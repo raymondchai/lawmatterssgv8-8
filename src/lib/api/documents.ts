@@ -4,13 +4,43 @@ import type { UploadedDocument } from '@/types';
 export const documentsApi = {
   // Get all documents for the current user
   async getDocuments() {
-    const { data, error } = await supabase
-      .from('uploaded_documents')
-      .select('*')
-      .order('created_at', { ascending: false });
-    
-    if (error) throw error;
-    return data as UploadedDocument[];
+    try {
+      const { data, error } = await supabase
+        .from('uploaded_documents')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching documents:', error);
+        throw error;
+      }
+
+      // Ensure data is an array and has valid structure
+      if (!Array.isArray(data)) {
+        console.warn('Documents data is not an array:', data);
+        return [];
+      }
+
+      // Validate and clean document data
+      const validDocuments = data.filter(doc => {
+        if (!doc || typeof doc !== 'object') {
+          console.warn('Invalid document object:', doc);
+          return false;
+        }
+        return doc.id && doc.filename;
+      }).map(doc => ({
+        ...doc,
+        // Ensure processing_status has a valid value
+        processing_status: doc.processing_status || 'pending',
+        // Ensure document_structure is an object
+        document_structure: doc.document_structure || {}
+      }));
+
+      return validDocuments as UploadedDocument[];
+    } catch (error) {
+      console.error('Failed to fetch documents:', error);
+      throw error;
+    }
   },
 
   // Get a specific document by ID
@@ -106,14 +136,45 @@ export const documentsApi = {
 
   // Search documents
   async searchDocuments(query: string) {
-    const { data, error } = await supabase
-      .from('uploaded_documents')
-      .select('*')
-      .or(`filename.ilike.%${query}%,ocr_text.ilike.%${query}%`)
-      .order('created_at', { ascending: false });
+    try {
+      if (!query || query.trim().length < 2) {
+        return [];
+      }
 
-    if (error) throw error;
-    return data as UploadedDocument[];
+      const { data, error } = await supabase
+        .from('uploaded_documents')
+        .select('*')
+        .or(`filename.ilike.%${query}%,ocr_text.ilike.%${query}%`)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error searching documents:', error);
+        throw error;
+      }
+
+      if (!Array.isArray(data)) {
+        console.warn('Search results data is not an array:', data);
+        return [];
+      }
+
+      // Apply the same validation as getDocuments
+      const validDocuments = data.filter(doc => {
+        if (!doc || typeof doc !== 'object') {
+          console.warn('Invalid document object in search:', doc);
+          return false;
+        }
+        return doc.id && doc.filename;
+      }).map(doc => ({
+        ...doc,
+        processing_status: doc.processing_status || 'pending',
+        document_structure: doc.document_structure || {}
+      }));
+
+      return validDocuments as UploadedDocument[];
+    } catch (error) {
+      console.error('Failed to search documents:', error);
+      throw error;
+    }
   },
 
   // Get documents by status

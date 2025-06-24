@@ -80,9 +80,9 @@ describe('PublicAnalysis Component', () => {
 
   it('displays upload component when not analyzing', () => {
     renderWithProviders(<PublicAnalysis />);
-    
+
     expect(screen.getByText('Upload Document')).toBeInTheDocument();
-    expect(screen.getByText(/Upload a PDF or image file/)).toBeInTheDocument();
+    expect(screen.getByText(/Drag and drop your file here, or click to browse/)).toBeInTheDocument();
   });
 
   it('shows rate limit information when available', () => {
@@ -188,8 +188,8 @@ describe('PublicAnalysis Component', () => {
     renderWithProviders(<PublicAnalysis />);
     
     // The upload component should be disabled
-    const uploadArea = screen.getByText(/Upload a PDF or image file/).closest('div');
-    expect(uploadArea).toHaveClass('opacity-50');
+    const uploadArea = screen.getByText(/Drag and drop your file here, or click to browse/).closest('div');
+    expect(uploadArea?.parentElement?.parentElement).toHaveClass('opacity-50');
   });
 
   it('disables upload when analyzing', () => {
@@ -207,8 +207,8 @@ describe('PublicAnalysis Component', () => {
     renderWithProviders(<PublicAnalysis />);
     
     // The upload component should be disabled during analysis
-    const uploadArea = screen.getByText(/Upload a PDF or image file/).closest('div');
-    expect(uploadArea).toHaveClass('opacity-50');
+    const uploadArea = screen.getByText(/Drag and drop your file here, or click to browse/).closest('div');
+    expect(uploadArea?.parentElement?.parentElement).toHaveClass('opacity-50');
   });
 
   it('displays feature cards correctly', () => {
@@ -230,13 +230,12 @@ describe('PublicAnalysis Component', () => {
 
   it('displays file requirements correctly', () => {
     renderWithProviders(<PublicAnalysis />);
-    
-    expect(screen.getByText('File Requirements')).toBeInTheDocument();
-    expect(screen.getByText('Supported Formats')).toBeInTheDocument();
+
+    expect(screen.getByText('Upload Guidelines:')).toBeInTheDocument();
     expect(screen.getByText('PDF')).toBeInTheDocument();
     expect(screen.getByText('JPEG')).toBeInTheDocument();
     expect(screen.getByText('PNG')).toBeInTheDocument();
     expect(screen.getByText('WebP')).toBeInTheDocument();
-    expect(screen.getByText('Maximum 10MB per file')).toBeInTheDocument();
+    expect(screen.getByText(/Maximum file size: 10MB/)).toBeInTheDocument();
   });
 });

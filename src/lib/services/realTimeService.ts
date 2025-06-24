@@ -45,11 +45,17 @@ class RealTimeService {
 
   // Subscribe to document processing updates
   subscribeToDocumentProcessing(
-    documentId: string, 
+    documentId: string,
     callback: (update: DocumentProcessingUpdate) => void
   ): () => void {
+    // Skip realtime subscriptions in development to avoid console errors
+    if (import.meta.env.DEV) {
+      console.log('Skipping document processing subscription in development');
+      return () => {}; // Return empty unsubscribe function
+    }
+
     const channelName = `document_processing:${documentId}`;
-    
+
     if (!this.channels.has(channelName)) {
       const channel = supabase
         .channel(channelName)
@@ -85,8 +91,14 @@ class RealTimeService {
     documentId: string,
     callback: (event: RealTimeEvent) => void
   ): () => void {
+    // Skip realtime subscriptions in development to avoid console errors
+    if (import.meta.env.DEV) {
+      console.log('Skipping document annotations subscription in development');
+      return () => {}; // Return empty unsubscribe function
+    }
+
     const channelName = `annotations:${documentId}`;
-    
+
     if (!this.channels.has(channelName)) {
       const channel = supabase
         .channel(channelName)

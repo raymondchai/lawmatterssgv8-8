@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
+
 import { Loader2, Eye, EyeOff, Shield, AlertTriangle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { sessionSecurityService } from '@/lib/services/sessionSecurity';
@@ -33,7 +33,7 @@ export const LoginForm: React.FC = () => {
     resetTime?: Date;
     isBlocked: boolean;
   } | null>(null);
-  const { signIn, verifyTwoFactor } = useAuth();
+  const { signIn } = useAuth();
   const navigate = useNavigate();
 
   // Check rate limit status on component mount
@@ -41,9 +41,35 @@ export const LoginForm: React.FC = () => {
     const checkRateLimit = async () => {
       try {
         const response = await fetch('https://api.ipify.org?format=json');
-        const data = await response.json();
-        const rateLimit = await sessionSecurityService.checkRateLimit(data.ip);
 
+        // Check if response is valid before calling json()
+        if (!response?.ok) {
+          console.warn('Failed to get IP address, using fallback');
+          // Use fallback IP for rate limiting
+          const rateLimit = await sessionSecurityService.checkRateLimit('127.0.0.1');
+          setRateLimitInfo({
+            attemptsRemaining: rateLimit.attemptsRemaining,
+            resetTime: rateLimit.resetTime,
+            isBlocked: !rateLimit.allowed
+          });
+          return;
+        }
+
+        const data = await response.json();
+
+        // Ensure data and data.ip exist
+        if (!data?.ip) {
+          console.warn('Invalid IP response, using fallback');
+          const rateLimit = await sessionSecurityService.checkRateLimit('127.0.0.1');
+          setRateLimitInfo({
+            attemptsRemaining: rateLimit.attemptsRemaining,
+            resetTime: rateLimit.resetTime,
+            isBlocked: !rateLimit.allowed
+          });
+          return;
+        }
+
+        const rateLimit = await sessionSecurityService.checkRateLimit(data.ip);
         setRateLimitInfo({
           attemptsRemaining: rateLimit.attemptsRemaining,
           resetTime: rateLimit.resetTime,
@@ -51,6 +77,23 @@ export const LoginForm: React.FC = () => {
         });
       } catch (error) {
         console.error('Error checking rate limit:', error);
+        // Provide fallback rate limit info on error
+        try {
+          const rateLimit = await sessionSecurityService.checkRateLimit('127.0.0.1');
+          setRateLimitInfo({
+            attemptsRemaining: rateLimit.attemptsRemaining,
+            resetTime: rateLimit.resetTime,
+            isBlocked: !rateLimit.allowed
+          });
+        } catch (fallbackError) {
+          console.error('Fallback rate limit check failed:', fallbackError);
+          // Set safe defaults if everything fails
+          setRateLimitInfo({
+            attemptsRemaining: 5,
+            resetTime: undefined,
+            isBlocked: false
+          });
+        }
       }
     };
 

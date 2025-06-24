@@ -39,7 +39,15 @@ import TemplateVersionManagement from "./pages/TemplateVersionManagement";
 import TemplateAnalytics from "./pages/dashboard/TemplateAnalytics";
 import SearchHistory from "./pages/dashboard/SearchHistory";
 import NotFound from "./pages/NotFound";
+import DebugAuth from "./pages/DebugAuth";
+import AuthTest from "./pages/AuthTest";
 import { ROUTES } from "@/lib/config/constants";
+import "@/utils/errorTracking"; // Initialize error tracking
+
+// Import test utilities for debugging in production
+if (import.meta.env.DEV || import.meta.env.VITE_DEBUG_MODE === 'true') {
+  import("@/test/platformStatsTest");
+}
 
 // Lazy load PDF-related components to avoid loading heavy libraries on initial page load
 const PdfAnnotationsDemo = lazy(() => import("./pages/PdfAnnotationsDemo"));
@@ -67,6 +75,8 @@ const App = () => {
               <Route path={ROUTES.forgotPassword} element={<ForgotPassword />} />
               <Route path={ROUTES.resetPassword} element={<ResetPassword />} />
               <Route path="/debug" element={<Debug />} />
+              <Route path="/debug-auth" element={<DebugAuth />} />
+              <Route path="/auth-test" element={<AuthTest />} />
               <Route path={ROUTES.dashboard} element={<Dashboard />} />
               <Route path={ROUTES.documents} element={<DashboardDocuments />} />
               <Route path="/dashboard/ai-assistant" element={<AIAssistant />} />

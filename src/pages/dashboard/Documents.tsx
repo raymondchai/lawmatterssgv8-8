@@ -7,18 +7,21 @@ import { DocumentSearch } from '@/components/legal/DocumentSearch';
 import { DocumentStatusTracker } from '@/components/legal/DocumentStatusTracker';
 import DocumentManagementDashboard from '@/components/documents/DocumentManagementDashboard';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import DatabaseTest from '@/components/debug/DatabaseTest';
+import ProductionDiagnostics from '@/components/debug/ProductionDiagnostics';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Upload, 
-  Search, 
-  List, 
-  BarChart3, 
-  Eye, 
+import {
+  Upload,
+  Search,
+  List,
+  BarChart3,
+  Eye,
   X,
   FileText,
-  TrendingUp
+  TrendingUp,
+  AlertCircle
 } from 'lucide-react';
 import type { UploadedDocument } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
@@ -54,6 +57,7 @@ const Documents: React.FC = () => {
 
   return (
     <AuthenticatedRoute>
+      <ErrorBoundary>
       <div className="min-h-screen bg-gray-50">
         {/* Header */}
         <header className="bg-white shadow">
@@ -109,7 +113,7 @@ const Documents: React.FC = () => {
             ) : (
               /* Main Dashboard Mode */
               <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-                <TabsList className="grid w-full grid-cols-5">
+                <TabsList className="grid w-full grid-cols-6">
                   <TabsTrigger value="overview" className="flex items-center space-x-2">
                     <BarChart3 className="h-4 w-4" />
                     <span>Overview</span>
@@ -129,6 +133,10 @@ const Documents: React.FC = () => {
                   <TabsTrigger value="enhanced" className="flex items-center space-x-2">
                     <TrendingUp className="h-4 w-4" />
                     <span>Enhanced</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="debug" className="flex items-center space-x-2">
+                    <AlertCircle className="h-4 w-4" />
+                    <span>Debug</span>
                   </TabsTrigger>
                 </TabsList>
 
@@ -275,11 +283,20 @@ const Documents: React.FC = () => {
                     <DocumentManagementDashboard />
                   </ErrorBoundary>
                 </TabsContent>
+
+                <TabsContent value="debug" className="space-y-6">
+                  {/* Debug Information */}
+                  <div className="space-y-6">
+                    <ProductionDiagnostics />
+                    <DatabaseTest />
+                  </div>
+                </TabsContent>
               </Tabs>
             )}
           </div>
         </main>
       </div>
+      </ErrorBoundary>
     </AuthenticatedRoute>
   );
 };

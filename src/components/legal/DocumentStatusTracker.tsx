@@ -14,6 +14,7 @@ import {
   TrendingUp
 } from 'lucide-react';
 import { documentsApi } from '@/lib/api/documents';
+import { supabase } from '@/lib/supabase';
 import { PROCESSING_STATUS } from '@/lib/config/constants';
 import type { UploadedDocument } from '@/types';
 import { toast } from '@/components/ui/sonner';
@@ -73,18 +74,35 @@ export const DocumentStatusTracker: React.FC<DocumentStatusTrackerProps> = ({
   const loadDocuments = async () => {
     try {
       setLoading(true);
+      console.log('DocumentStatusTracker: Starting to load documents...');
+
+      // Check authentication first
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError) {
+        console.error('DocumentStatusTracker: Auth error:', authError);
+        throw new Error('Authentication failed');
+      }
+
+      if (!user) {
+        console.error('DocumentStatusTracker: No authenticated user');
+        throw new Error('User not authenticated');
+      }
+
+      console.log('DocumentStatusTracker: User authenticated:', user.email);
+
       const allDocuments = await documentsApi.getDocuments();
-      
+      console.log('DocumentStatusTracker: Loaded documents:', allDocuments.length);
+
       // Sort by creation date, newest first
-      const sortedDocs = allDocuments.sort((a, b) => 
+      const sortedDocs = allDocuments.sort((a, b) =>
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       );
-      
+
       setDocuments(sortedDocs);
       calculateStats(sortedDocs);
     } catch (error: any) {
-      console.error('Error loading documents:', error);
-      toast.error('Failed to load document status');
+      console.error('DocumentStatusTracker: Error loading documents:', error);
+      toast.error(`Failed to load document status: ${error.message}`);
     } finally {
       setLoading(false);
     }

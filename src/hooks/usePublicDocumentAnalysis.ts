@@ -3,7 +3,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   publicDocumentAnalysisService,
   type PublicDocumentAnalysis,
-  type RateLimitStatus,
   type PublicAnalysisSession
 } from '@/lib/services/publicDocumentAnalysis';
 import { publicAnalyticsService } from '@/lib/services/publicAnalytics';
@@ -38,8 +37,14 @@ export function usePublicDocumentAnalysis(options: UsePublicDocumentAnalysisOpti
   const getUserIP = useCallback(async (): Promise<string> => {
     try {
       const response = await fetch('https://api.ipify.org?format=json');
+
+      if (!response?.ok) {
+        console.warn('Failed to get IP address, using fallback');
+        return '127.0.0.1';
+      }
+
       const data = await response.json();
-      return data.ip;
+      return data?.ip ?? '127.0.0.1';
     } catch {
       return '127.0.0.1'; // Fallback
     }
@@ -295,8 +300,14 @@ export function usePublicRateLimit() {
   const getUserIP = useCallback(async (): Promise<string> => {
     try {
       const response = await fetch('https://api.ipify.org?format=json');
+
+      if (!response?.ok) {
+        console.warn('Failed to get IP address, using fallback');
+        return '127.0.0.1';
+      }
+
       const data = await response.json();
-      return data.ip;
+      return data?.ip ?? '127.0.0.1';
     } catch {
       return '127.0.0.1';
     }
