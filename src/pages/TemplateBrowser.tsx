@@ -173,7 +173,10 @@ export default function TemplateBrowser() {
     navigate(`${ROUTES.templatePreview}/${template.slug}`);
   };
 
-  const formatPrice = (price: number) => {
+  const formatPrice = (price: number | undefined | null) => {
+    if (price === null || price === undefined || isNaN(price)) {
+      return 'Free';
+    }
     return price === 0 ? 'Free' : `S$${price.toFixed(2)}`;
   };
 

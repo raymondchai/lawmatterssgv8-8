@@ -5,22 +5,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu, User, Building2, FileText, MessageSquare, Search } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
+// Temporarily removed useAuth to isolate button visibility issue
+// import { useAuth } from "@/contexts/AuthContext";
 
 export const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearch, setShowSearch] = useState(false);
   const navigate = useNavigate();
-  const { user, loading } = useAuth();
 
-  // Debug logging
-  console.log('Navigation - Auth state:', {
-    user: user?.email || 'No user',
-    loading,
-    hasUser: !!user,
-    timestamp: new Date().toISOString()
-  });
+  // Temporarily removed auth dependency to isolate button issue
+  // const { user, loading } = useAuth();
+  const user = null; // Force no user state to always show login buttons
+  const loading = false;
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,13 +49,13 @@ export const Navigation = () => {
           </div>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-6">
-            <div className="flex items-baseline space-x-4">
+          <div className="hidden lg:flex items-center space-x-4 flex-1">
+            <div className="flex items-baseline space-x-3 ml-8">
               {navItems.map((item) => (
                 <Link
                   key={item.name}
                   to={item.href}
-                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-1 ${
+                  className={`px-2 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-1 ${
                     item.highlight
                       ? "bg-blue-600 text-white hover:bg-blue-700"
                       : "text-gray-700 hover:text-blue-600"
@@ -70,8 +67,8 @@ export const Navigation = () => {
               ))}
             </div>
 
-            {/* Search Bar */}
-            <div className="relative">
+            {/* Search Bar - Only on larger screens */}
+            <div className="relative hidden xl:block">
               {showSearch ? (
                 <form onSubmit={handleSearch} className="flex items-center">
                   <div className="relative">
@@ -81,7 +78,7 @@ export const Navigation = () => {
                       placeholder="Search legal topics..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-10 pr-4 py-2 w-64 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                      className="pl-10 pr-4 py-2 w-48 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                       autoFocus
                       onBlur={() => {
                         if (!searchQuery.trim()) {
@@ -108,54 +105,32 @@ export const Navigation = () => {
             </div>
           </div>
 
-          {/* CTA Buttons - Always show for debugging */}
-          <div className="flex items-center space-x-2 flex-shrink-0">
-            {/* Debug indicator */}
-            {import.meta.env.DEV && (
-              <div className="text-xs text-gray-500 mr-2">
-                {loading ? 'Loading...' : user ? `User: ${user.email}` : 'No user'}
-              </div>
-            )}
-            {loading ? (
-              <div className="flex items-center space-x-2">
-                <div className="w-20 h-9 bg-gray-200 animate-pulse rounded"></div>
-                <div className="w-24 h-9 bg-gray-200 animate-pulse rounded"></div>
-              </div>
-            ) : user ? (
-              <Button
-                onClick={() => navigate('/dashboard')}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                <User className="h-4 w-4 mr-2" />
-                Dashboard
-              </Button>
-            ) : (
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => navigate('/auth/login')}
-                  className="text-xs px-2 py-1 whitespace-nowrap"
-                >
-                  Sign In
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => navigate('/auth/register')}
-                  className="bg-blue-600 hover:bg-blue-700 text-xs px-2 py-1 whitespace-nowrap"
-                >
-                  Get Started
-                </Button>
-              </div>
-            )}
+          {/* CTA Buttons - ALWAYS SHOW LOGIN BUTTONS */}
+          <div className="flex items-center space-x-2 flex-shrink-0 ml-4">
+            {/* Always show login buttons - no conditional logic */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/auth/login')}
+              className="px-4 py-2 text-sm font-medium whitespace-nowrap border-gray-300 hover:border-blue-600 hover:text-blue-600"
+            >
+              Sign In
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => navigate('/auth/register')}
+              className="bg-blue-600 hover:bg-blue-700 px-4 py-2 text-sm font-medium whitespace-nowrap"
+            >
+              Get Started
+            </Button>
           </div>
 
           {/* Mobile menu button */}
-          <div className="sm:hidden">
+          <div className="lg:hidden ml-2">
             <Sheet open={isOpen} onOpenChange={setIsOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <Menu className="h-6 w-6" />
+                <Button variant="ghost" size="icon" className="p-2">
+                  <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
               <SheetContent side="right" className="w-[300px] sm:w-[400px]">
@@ -193,12 +168,7 @@ export const Navigation = () => {
                     </Link>
                   ))}
                   <div className="border-t pt-4 mt-4">
-                    {loading ? (
-                      <div className="space-y-2 mt-4">
-                        <div className="w-full h-9 bg-gray-200 animate-pulse rounded"></div>
-                        <div className="w-full h-9 bg-gray-200 animate-pulse rounded"></div>
-                      </div>
-                    ) : user ? (
+                    {user ? (
                       <Button
                         onClick={() => {
                           navigate('/dashboard');
@@ -218,8 +188,9 @@ export const Navigation = () => {
                             setIsOpen(false);
                           }}
                           className="w-full"
+                          disabled={loading}
                         >
-                          Sign In
+                          {loading ? 'Loading...' : 'Sign In'}
                         </Button>
                         <Button
                           onClick={() => {
@@ -227,8 +198,9 @@ export const Navigation = () => {
                             setIsOpen(false);
                           }}
                           className="w-full bg-blue-600 hover:bg-blue-700"
+                          disabled={loading}
                         >
-                          Get Started
+                          {loading ? 'Loading...' : 'Get Started'}
                         </Button>
                       </div>
                     )}

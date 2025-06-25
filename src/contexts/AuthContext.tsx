@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState, useMemo } from '
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { authConfig } from '@/lib/auth/config';
+import { profilesApi } from '@/lib/api/profiles';
 import type { User as ProfileUser } from '@/types';
 
 interface AuthContextType {
@@ -197,14 +198,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const loadProfile = async () => {
     try {
-      // For now, skip profile loading to avoid console errors
-      // We'll implement this properly once the database is set up
-      console.log('Profile loading skipped - using basic user data');
-      setProfile(null);
-
-      // Uncomment this when profiles table is ready:
-      // const profileData = await profilesApi.getCurrentProfile();
-      // setProfile(profileData);
+      console.log('Loading user profile from database...');
+      const profileData = await profilesApi.getCurrentProfile();
+      setProfile(profileData);
+      console.log('Profile loaded successfully:', profileData?.email, 'Role:', profileData?.role);
     } catch (error) {
       console.error('Error loading profile:', error);
       setProfile(null);

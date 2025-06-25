@@ -109,8 +109,22 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
               <div className="hidden sm:block">
                 <Link to="/dashboard/subscription">
                   <Button variant="outline" size="sm">
-                    <CreditCard className="h-4 w-4 mr-2" />
-                    {profile?.subscription_tier || 'Free'}
+                    {profile?.role === 'super_admin' ? (
+                      <>
+                        <Shield className="h-4 w-4 mr-2" />
+                        Super Admin
+                      </>
+                    ) : profile?.role === 'admin' ? (
+                      <>
+                        <Shield className="h-4 w-4 mr-2" />
+                        Admin
+                      </>
+                    ) : (
+                      <>
+                        <CreditCard className="h-4 w-4 mr-2" />
+                        {profile?.subscription_tier || 'Free'}
+                      </>
+                    )}
                   </Button>
                 </Link>
               </div>

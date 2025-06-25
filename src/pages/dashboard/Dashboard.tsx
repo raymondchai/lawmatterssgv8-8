@@ -1,14 +1,22 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { AuthenticatedRoute } from '@/components/auth/ProtectedRoute';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, MessageSquare, Files, User } from 'lucide-react';
+import { FileText, MessageSquare, Files, User, Home } from 'lucide-react';
 import { ROUTES } from '@/lib/config/constants';
 
 const Dashboard: React.FC = () => {
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, signOut, loading } = useAuth();
+  const navigate = useNavigate();
+
+  // Debug logging
+  console.log('Dashboard - User:', user?.email);
+  console.log('Dashboard - Profile:', profile);
+  console.log('Dashboard - Profile Role:', profile?.role);
+  console.log('Dashboard - Profile Subscription:', profile?.subscription_tier);
+  console.log('Dashboard - Loading:', loading);
 
   const handleSignOut = async () => {
     try {
@@ -25,11 +33,22 @@ const Dashboard: React.FC = () => {
         <header className="bg-white shadow">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center py-6">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-                <p className="text-gray-600">
-                  Welcome back, {profile?.first_name || user?.email}!
-                </p>
+              <div className="flex items-center space-x-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate('/')}
+                  className="flex items-center space-x-2"
+                >
+                  <Home className="h-4 w-4" />
+                  <span className="hidden sm:inline">Homepage</span>
+                </Button>
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+                  <p className="text-gray-600">
+                    Welcome back, {profile?.first_name || user?.email}!
+                  </p>
+                </div>
               </div>
               <Button onClick={handleSignOut} variant="outline">
                 Sign Out
@@ -84,15 +103,19 @@ const Dashboard: React.FC = () => {
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Subscription</CardTitle>
+                  <CardTitle className="text-sm font-medium">
+                    {profile?.role === 'super_admin' || profile?.role === 'admin' ? 'Role' : 'Subscription'}
+                  </CardTitle>
                   <User className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold capitalize">
-                    {profile?.subscription_tier || 'Free'}
+                    {profile?.role === 'super_admin' ? 'Super Admin' :
+                     profile?.role === 'admin' ? 'Admin' :
+                     profile?.subscription_tier || 'Free'}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Current plan
+                    {profile?.role === 'super_admin' || profile?.role === 'admin' ? 'Administrative access' : 'Current plan'}
                   </p>
                 </CardContent>
               </Card>

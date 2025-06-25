@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { AuthenticatedRoute } from '@/components/auth/ProtectedRoute';
 import { DocumentUpload } from '@/components/legal/DocumentUpload';
 import { DocumentList } from '@/components/legal/DocumentList';
@@ -17,17 +18,20 @@ import {
   Search,
   List,
   BarChart3,
-  Eye,
   X,
   FileText,
   TrendingUp,
-  AlertCircle
+  AlertCircle,
+  Home,
+  ArrowLeft,
+  Menu
 } from 'lucide-react';
 import type { UploadedDocument } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 
 const Documents: React.FC = () => {
   const { profile } = useAuth();
+  const navigate = useNavigate();
   const [selectedDocument, setSelectedDocument] = useState<UploadedDocument | null>(null);
   const [searchResults, setSearchResults] = useState<UploadedDocument[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -63,11 +67,38 @@ const Documents: React.FC = () => {
         <header className="bg-white shadow">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center py-6">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">Document Management</h1>
-                <p className="text-gray-600">
-                  Upload, process, and manage your legal documents with AI
-                </p>
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate('/')}
+                    className="flex items-center space-x-1 px-2 sm:px-3"
+                    title="Go to Homepage"
+                  >
+                    <Home className="h-4 w-4" />
+                    <span className="hidden sm:inline">Home</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate('/dashboard')}
+                    className="flex items-center space-x-1 px-2 sm:px-3"
+                    title="Back to Dashboard"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    <span className="hidden sm:inline">Dashboard</span>
+                  </Button>
+                </div>
+                <div className="hidden md:block">
+                  <h1 className="text-3xl font-bold text-gray-900">Document Management</h1>
+                  <p className="text-gray-600">
+                    Upload, process, and manage your legal documents with AI
+                  </p>
+                </div>
+                <div className="md:hidden">
+                  <h1 className="text-xl font-bold text-gray-900">Documents</h1>
+                </div>
               </div>
               <div className="flex items-center space-x-4">
                 <div className="text-right">
