@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, User, Building2, FileText, MessageSquare, Search } from "lucide-react";
+import { Menu, User, Building2, FileText, MessageSquare, Search, Files } from "lucide-react";
 // Temporarily removed useAuth to isolate button visibility issue
 // import { useAuth } from "@/contexts/AuthContext";
 
@@ -31,6 +31,7 @@ export const Navigation = () => {
   const navItems = [
     { name: "Home", href: "/" },
     { name: "Free Analysis", href: "/analyze", icon: FileText, highlight: true },
+    { name: "Templates", href: "/templates", icon: Files },
     { name: "Law Firms", href: "/law-firms", icon: Building2 },
     { name: "Documents", href: "/documents", icon: FileText },
     { name: "Legal Q&A", href: "/legal-qa", icon: MessageSquare },

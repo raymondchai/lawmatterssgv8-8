@@ -9,6 +9,11 @@
         "MCP_AUTO_FIX": "false",
         "MCP_WATCH_PATHS": "src/**/*.ts,src/**/*.tsx"
       }
+    },
+    "playwright": {
+      "command": "npx",
+      "args": ["@playwright/mcp@latest"],
+      "cwd": "C:/Webapp-Projects-1/lawmatterssgv8-8"
     }
   }
 }

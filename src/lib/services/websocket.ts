@@ -49,10 +49,9 @@ class WebSocketService {
   private userId: string | null = null;
 
   constructor() {
-    // Only set up auth listener in production
-    if (!import.meta.env.DEV) {
-      this.setupAuthListener();
-    }
+    // Disable WebSocket connections in production to avoid connection errors
+    // WebSocket is only needed for real-time collaboration features
+    console.log('WebSocket service initialized but connections disabled in production');
   }
 
   private setupAuthListener() {
@@ -68,70 +67,9 @@ class WebSocketService {
   }
 
   async connect(): Promise<void> {
-    if (this.isConnecting || (this.ws && this.ws.readyState === WebSocket.OPEN)) {
-      return;
-    }
-
-    if (!this.userId) {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) {
-        console.warn('Cannot connect WebSocket: No authenticated user');
-        return;
-      }
-      this.userId = session.user.id;
-    }
-
-    this.isConnecting = true;
-
-    try {
-      // Get WebSocket URL from environment or construct it
-      const wsUrl = this.getWebSocketUrl();
-      
-      this.ws = new WebSocket(wsUrl);
-
-      this.ws.onopen = () => {
-        console.log('WebSocket connected');
-        this.isConnecting = false;
-        this.reconnectAttempts = 0;
-        
-        // Send authentication message
-        this.send({
-          type: 'auth',
-          payload: { userId: this.userId },
-          timestamp: new Date().toISOString()
-        });
-      };
-
-      this.ws.onmessage = (event) => {
-        try {
-          const message: WebSocketMessage = JSON.parse(event.data);
-          this.handleMessage(message);
-        } catch (error) {
-          console.error('Error parsing WebSocket message:', error);
-        }
-      };
-
-      this.ws.onclose = (event) => {
-        console.log('WebSocket disconnected:', event.code, event.reason);
-        this.isConnecting = false;
-        this.ws = null;
-
-        // Attempt to reconnect if not a normal closure
-        if (event.code !== 1000 && this.reconnectAttempts < this.maxReconnectAttempts) {
-          this.scheduleReconnect();
-        }
-      };
-
-      this.ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
-        this.isConnecting = false;
-      };
-
-    } catch (error) {
-      console.error('Error connecting WebSocket:', error);
-      this.isConnecting = false;
-      this.scheduleReconnect();
-    }
+    // WebSocket connections disabled in production to avoid connection errors
+    console.log('WebSocket connection skipped - disabled in production');
+    return;
   }
 
   private getWebSocketUrl(): string {
@@ -395,7 +333,43 @@ class MockWebSocketService {
   }
 }
 
+// Create a disabled WebSocket service for production
+class DisabledWebSocketService {
+  async connect(): Promise<void> {
+    // No-op - WebSocket disabled in production
+  }
+
+  disconnect(): void {
+    // No-op - WebSocket disabled in production
+  }
+
+  subscribe(type: string, handler: WebSocketEventHandler): () => void {
+    // Return empty unsubscribe function
+    return () => {};
+  }
+
+  sendDocumentProcessingUpdate(update: DocumentProcessingUpdate): void {
+    // No-op - WebSocket disabled in production
+  }
+
+  sendAIQueryUpdate(update: AIQueryUpdate): void {
+    // No-op - WebSocket disabled in production
+  }
+
+  sendSystemNotification(notification: SystemNotification): void {
+    // No-op - WebSocket disabled in production
+  }
+
+  get isConnected(): boolean {
+    return false;
+  }
+
+  get connectionState(): string {
+    return 'disabled';
+  }
+}
+
 // Export the appropriate service based on environment
-export const realtimeService = import.meta.env.DEV 
-  ? new MockWebSocketService() 
-  : webSocketService;
+export const realtimeService = import.meta.env.DEV
+  ? new MockWebSocketService()
+  : new DisabledWebSocketService();

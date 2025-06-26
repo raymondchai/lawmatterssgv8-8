@@ -17,6 +17,7 @@ interface AuthContextType {
   resetPassword: (email: string) => Promise<void>;
   updatePassword: (password: string) => Promise<void>;
   refreshProfile: () => Promise<void>;
+  forceRefreshProfile: () => Promise<ProfileUser | null>;
   verifyTwoFactor: (token: string, backupCode?: string) => Promise<void>;
   isTwoFactorEnabled: () => boolean;
 }
@@ -196,15 +197,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
   }, []);
 
-  const loadProfile = async () => {
+  const loadProfile = async (retryCount = 0) => {
     try {
-      console.log('Loading user profile from database...');
+      console.log('Loading user profile from database...', retryCount > 0 ? `(retry ${retryCount})` : '');
       const profileData = await profilesApi.getCurrentProfile();
       setProfile(profileData);
       console.log('Profile loaded successfully:', profileData?.email, 'Role:', profileData?.role);
     } catch (error) {
       console.error('Error loading profile:', error);
-      setProfile(null);
+
+      // Retry up to 2 times with exponential backoff
+      if (retryCount < 2) {
+        const delay = Math.pow(2, retryCount) * 1000; // 1s, 2s
+        console.log(`Retrying profile load in ${delay}ms...`);
+        setTimeout(() => loadProfile(retryCount + 1), delay);
+      } else {
+        console.error('Failed to load profile after retries, setting to null');
+        setProfile(null);
+      }
     }
   };
 
@@ -296,6 +306,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return false;
   };
 
+  // Force refresh profile from database (bypasses cache)
+  const forceRefreshProfile = async (): Promise<ProfileUser | null> => {
+    console.log('Force refreshing user profile from database...');
+    try {
+      const profileData = await profilesApi.getCurrentProfile();
+      setProfile(profileData);
+      console.log('Profile force refreshed successfully:', profileData?.email, 'Tier:', profileData?.subscription_tier);
+      return profileData;
+    } catch (error) {
+      console.error('Error force refreshing profile:', error);
+      throw error;
+    }
+  };
+
   const value: AuthContextType = useMemo(() => ({
     user,
     profile,
@@ -308,6 +332,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     resetPassword,
     updatePassword,
     refreshProfile,
+    forceRefreshProfile,
     verifyTwoFactor,
     isTwoFactorEnabled,
   }), [
@@ -322,6 +347,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     resetPassword,
     updatePassword,
     refreshProfile,
+    forceRefreshProfile,
     verifyTwoFactor,
     isTwoFactorEnabled,
   ]);

@@ -48,11 +48,9 @@ class RealTimeService {
     documentId: string,
     callback: (update: DocumentProcessingUpdate) => void
   ): () => void {
-    // Skip realtime subscriptions in development to avoid console errors
-    if (import.meta.env.DEV) {
-      console.log('Skipping document processing subscription in development');
-      return () => {}; // Return empty unsubscribe function
-    }
+    // Skip realtime subscriptions to avoid console errors
+    console.log('Skipping document processing subscription - realtime disabled');
+    return () => {}; // Return empty unsubscribe function
 
     const channelName = `document_processing:${documentId}`;
 

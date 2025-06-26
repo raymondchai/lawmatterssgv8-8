@@ -14,15 +14,12 @@ import LegalQA from "./pages/LegalQA";
 import { QuestionDetail } from "./components/qa";
 import Login from "./pages/auth/Login";
 import Debug from "./pages/Debug";
+import DebugUpload from "./pages/DebugUpload";
 import Register from "./pages/auth/Register";
 import ForgotPassword from "./pages/auth/ForgotPassword";
 import ResetPassword from "./pages/auth/ResetPassword";
 import Dashboard from "./pages/dashboard/Dashboard";
-import DashboardDocuments from "./pages/dashboard/Documents";
-import AIAssistant from "./pages/dashboard/AIAssistant";
-import Templates from "./pages/dashboard/Templates";
 import DashboardLawFirms from "./pages/dashboard/LawFirms";
-import Admin from "./pages/dashboard/Admin";
 import Subscription from "./pages/dashboard/Subscription";
 import Settings from "./pages/dashboard/Settings";
 import SecuritySettings from "./pages/dashboard/SecuritySettings";
@@ -34,9 +31,7 @@ import PublicAnalysis from "./pages/PublicAnalysis";
 import PublicAnalysisResult from "./pages/PublicAnalysisResult";
 import TemplateBrowser from "./pages/TemplateBrowser";
 import TemplatePreview from "./pages/TemplatePreview";
-import TemplateCustomize from "./pages/TemplateCustomize";
-import TemplateVersionManagement from "./pages/TemplateVersionManagement";
-import TemplateAnalytics from "./pages/dashboard/TemplateAnalytics";
+
 import SearchHistory from "./pages/dashboard/SearchHistory";
 import NotFound from "./pages/NotFound";
 import DebugAuth from "./pages/DebugAuth";
@@ -49,8 +44,19 @@ if (import.meta.env.DEV || import.meta.env.VITE_DEBUG_MODE === 'true') {
   import("@/test/platformStatsTest");
 }
 
-// Lazy load PDF-related components to avoid loading heavy libraries on initial page load
+// Lazy load heavy components to avoid loading large libraries on initial page load
 const PdfAnnotationsDemo = lazy(() => import("./pages/PdfAnnotationsDemo"));
+
+// Lazy load document-heavy components
+const LazyDashboardDocuments = lazy(() => import("./pages/dashboard/Documents"));
+const LazyAIAssistant = lazy(() => import("./pages/dashboard/AIAssistant"));
+const LazyTemplates = lazy(() => import("./pages/dashboard/Templates"));
+const LazyTemplateCustomize = lazy(() => import("./pages/TemplateCustomize"));
+const LazyTemplateVersionManagement = lazy(() => import("./pages/TemplateVersionManagement"));
+const LazyTemplateAnalytics = lazy(() => import("./pages/dashboard/TemplateAnalytics"));
+
+// Lazy load admin components
+const LazyAdmin = lazy(() => import("./pages/dashboard/Admin"));
 
 const queryClient = new QueryClient();
 
@@ -75,15 +81,46 @@ const App = () => {
               <Route path={ROUTES.forgotPassword} element={<ForgotPassword />} />
               <Route path={ROUTES.resetPassword} element={<ResetPassword />} />
               <Route path="/debug" element={<Debug />} />
+              <Route path="/debug/upload" element={<DebugUpload />} />
               <Route path="/debug-auth" element={<DebugAuth />} />
               <Route path="/auth-test" element={<AuthTest />} />
               <Route path={ROUTES.dashboard} element={<Dashboard />} />
-              <Route path={ROUTES.documents} element={<DashboardDocuments />} />
-              <Route path="/dashboard/ai-assistant" element={<AIAssistant />} />
-              <Route path="/dashboard/templates" element={<Templates />} />
+              <Route path={ROUTES.documents} element={
+                <Suspense fallback={<div className="flex items-center justify-center h-screen">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                </div>}>
+                  <LazyDashboardDocuments />
+                </Suspense>
+              } />
+              <Route path="/dashboard/ai-assistant" element={
+                <Suspense fallback={<div className="flex items-center justify-center h-screen">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                </div>}>
+                  <LazyAIAssistant />
+                </Suspense>
+              } />
+              <Route path="/dashboard/templates" element={
+                <Suspense fallback={<div className="flex items-center justify-center h-screen">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                </div>}>
+                  <LazyTemplates />
+                </Suspense>
+              } />
               <Route path="/dashboard/law-firms" element={<DashboardLawFirms />} />
-              <Route path="/dashboard/admin" element={<Admin />} />
-              <Route path="/dashboard/template-analytics" element={<TemplateAnalytics />} />
+              <Route path="/dashboard/admin" element={
+                <Suspense fallback={<div className="flex items-center justify-center h-screen">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                </div>}>
+                  <LazyAdmin />
+                </Suspense>
+              } />
+              <Route path="/dashboard/template-analytics" element={
+                <Suspense fallback={<div className="flex items-center justify-center h-screen">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                </div>}>
+                  <LazyTemplateAnalytics />
+                </Suspense>
+              } />
               <Route path="/dashboard/search-history" element={<SearchHistory />} />
               <Route path="/dashboard/subscription" element={<Subscription />} />
               <Route path="/dashboard/settings" element={<Settings />} />
@@ -98,8 +135,20 @@ const App = () => {
               <Route path={ROUTES.templateBrowser} element={<TemplateBrowser />} />
               <Route path={ROUTES.templateMarketplace} element={<TemplateBrowser />} />
               <Route path={`${ROUTES.templatePreview}/:slug`} element={<TemplatePreview />} />
-              <Route path={`${ROUTES.templateCustomize}/:slug`} element={<TemplateCustomize />} />
-              <Route path={`/templates/:slug/versions`} element={<TemplateVersionManagement />} />
+              <Route path={`${ROUTES.templateCustomize}/:slug`} element={
+                <Suspense fallback={<div className="flex items-center justify-center h-screen">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                </div>}>
+                  <LazyTemplateCustomize />
+                </Suspense>
+              } />
+              <Route path={`/templates/:slug/versions`} element={
+                <Suspense fallback={<div className="flex items-center justify-center h-screen">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                </div>}>
+                  <LazyTemplateVersionManagement />
+                </Suspense>
+              } />
               {/* PDF Annotations Demo Route */}
               <Route
                 path="/pdf-annotations-demo"

@@ -60,6 +60,7 @@ const EnhancedDocumentUpload: React.FC<EnhancedDocumentUploadProps> = ({
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     if (!canUploadDocuments) {
+      toast.warning('Upload not available. Please check your subscription or try again later.');
       return;
     }
 

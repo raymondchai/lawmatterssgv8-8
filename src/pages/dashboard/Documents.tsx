@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthenticatedRoute } from '@/components/auth/ProtectedRoute';
-import { DocumentUpload } from '@/components/legal/DocumentUpload';
+import { DocumentUploadWrapper } from '@/components/legal/DocumentUploadWrapper';
 import { DocumentList } from '@/components/legal/DocumentList';
 import { DocumentViewer } from '@/components/legal/DocumentViewer';
 import { DocumentSearch } from '@/components/legal/DocumentSearch';
@@ -9,6 +9,7 @@ import { DocumentStatusTracker } from '@/components/legal/DocumentStatusTracker'
 import DocumentManagementDashboard from '@/components/documents/DocumentManagementDashboard';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import DatabaseTest from '@/components/debug/DatabaseTest';
+import { UploadDebug } from '@/components/debug/UploadDebug';
 import ProductionDiagnostics from '@/components/debug/ProductionDiagnostics';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,7 +31,7 @@ import type { UploadedDocument } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 
 const Documents: React.FC = () => {
-  const { profile } = useAuth();
+  const { profile, forceRefreshProfile } = useAuth();
   const navigate = useNavigate();
   const [selectedDocument, setSelectedDocument] = useState<UploadedDocument | null>(null);
   const [searchResults, setSearchResults] = useState<UploadedDocument[]>([]);
@@ -106,7 +107,27 @@ const Documents: React.FC = () => {
                   <p className="font-medium capitalize">
                     {profile?.subscription_tier || 'Free'}
                   </p>
+                  <p className="text-xs text-gray-400">
+                    Debug: {JSON.stringify({tier: profile?.subscription_tier, email: profile?.email})}
+                  </p>
                 </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    try {
+                      await forceRefreshProfile();
+                      console.log('Profile refreshed successfully');
+                    } catch (error) {
+                      console.error('Failed to refresh profile:', error);
+                    }
+                  }}
+                  className="flex items-center space-x-1"
+                  title="Refresh subscription status"
+                >
+                  <TrendingUp className="h-4 w-4" />
+                  <span className="hidden sm:inline">Refresh</span>
+                </Button>
               </div>
             </div>
           </div>
@@ -195,7 +216,7 @@ const Documents: React.FC = () => {
                           </CardDescription>
                         </CardHeader>
                         <CardContent>
-                          <DocumentUpload
+                          <DocumentUploadWrapper
                             onUploadComplete={handleUploadComplete}
                             maxFiles={3}
                           />
@@ -228,7 +249,7 @@ const Documents: React.FC = () => {
                   {/* Upload Interface */}
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div className="lg:col-span-2">
-                      <DocumentUpload
+                      <DocumentUploadWrapper
                         onUploadComplete={handleUploadComplete}
                         maxFiles={10}
                       />
@@ -318,6 +339,8 @@ const Documents: React.FC = () => {
                 <TabsContent value="debug" className="space-y-6">
                   {/* Debug Information */}
                   <div className="space-y-6">
+                    <UploadDiagnostics />
+                    <UploadDebug />
                     <ProductionDiagnostics />
                     <DatabaseTest />
                   </div>

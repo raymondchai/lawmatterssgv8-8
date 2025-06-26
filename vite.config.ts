@@ -32,12 +32,55 @@ export default defineConfig(({ mode }) => ({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          // Separate heavy dependencies into their own chunks
-          'pdf-worker': ['pdfjs-dist'],
-          'ocr-worker': ['tesseract.js'],
-          'vendor': ['react', 'react-dom', 'react-router-dom'],
-          'ui': ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu'],
+        manualChunks: (id) => {
+          // PDF and OCR workers
+          if (id.includes('pdfjs-dist')) return 'pdf-worker';
+          if (id.includes('tesseract.js')) return 'ocr-worker';
+
+          // Core React libraries
+          if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
+            return 'react-vendor';
+          }
+
+          // UI component libraries
+          if (id.includes('@radix-ui') || id.includes('lucide-react')) {
+            return 'ui-components';
+          }
+
+          // Form and validation libraries
+          if (id.includes('react-hook-form') || id.includes('zod') || id.includes('@hookform')) {
+            return 'forms';
+          }
+
+          // Data fetching and state management
+          if (id.includes('@tanstack') || id.includes('react-query')) {
+            return 'data-fetching';
+          }
+
+          // Supabase and authentication
+          if (id.includes('@supabase') || id.includes('supabase')) {
+            return 'supabase';
+          }
+
+          // AI and OpenAI libraries
+          if (id.includes('openai') || id.includes('ai')) {
+            return 'ai-services';
+          }
+
+          // Date and utility libraries
+          if (id.includes('date-fns') || id.includes('lodash') || id.includes('uuid')) {
+            return 'utilities';
+          }
+
+          // Document processing libraries
+          if (id.includes('docx') || id.includes('jspdf') || id.includes('html2canvas')) {
+            return 'document-processing';
+          }
+
+          // Other large vendor libraries
+          if (id.includes('node_modules')) {
+            return 'vendor';
+          }
         },
       },
     },

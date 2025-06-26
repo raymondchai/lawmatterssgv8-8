@@ -38,32 +38,64 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
 }) => {
   const [uploadFiles, setUploadFiles] = useState<UploadFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);
-  const { profile } = useAuth();
+  const [isCheckingLimits, setIsCheckingLimits] = useState(false);
+  const { profile, loading: authLoading } = useAuth();
   const { simulateDocumentProcessing } = useRealTimeSimulation();
 
-  const onDrop = useCallback(async (acceptedFiles: File[]) => {
-    // Check usage limits with new usage tracking service
-    try {
-      const { usageTrackingService } = await import('@/lib/services/usageTracking');
-      const usageLimit = await usageTrackingService.checkUsageLimit('document_upload');
-
-      if (!usageLimit.allowed) {
-        toast.error(`Upload limit reached. You have used ${usageLimit.current}/${usageLimit.limit} document uploads this month. Please upgrade your plan to continue.`);
-        return;
-      }
-
-      // Warn if approaching limit (80% or more)
-      if (usageLimit.percentage >= 80) {
-        toast.warning(`You have used ${usageLimit.current}/${usageLimit.limit} document uploads this month (${Math.round(usageLimit.percentage)}%).`);
-      }
-    } catch (error) {
-      console.error('Error checking usage limits:', error);
-      toast.error('Unable to verify upload limits. Please try again.');
-      return;
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    // Allow upload even if profile isn't loaded yet, but warn user
+    if (!profile && !authLoading) {
+      toast.warning('Profile not fully loaded. Upload will proceed with default settings.');
     }
 
+    // Set checking limits state
+    setIsCheckingLimits(true);
+
+    // Check usage limits with timeout and fallback
+    const checkLimitsAndProcess = async () => {
+      try {
+        // Only check usage limits if we have a profile loaded
+        if (profile) {
+          const { usageTrackingService } = await import('@/lib/services/usageTracking');
+
+          // Add timeout to prevent hanging
+          const usageCheckPromise = usageTrackingService.checkUsageLimit('document_upload');
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Usage check timeout')), 5000)
+          );
+
+          const usageLimit = await Promise.race([usageCheckPromise, timeoutPromise]) as any;
+
+          if (!usageLimit.allowed) {
+            toast.error(`Upload limit reached. You have used ${usageLimit.current}/${usageLimit.limit} document uploads this month. Please upgrade your plan to continue.`);
+            setIsCheckingLimits(false);
+            return;
+          }
+
+          // Warn if approaching limit (80% or more)
+          if (usageLimit.percentage >= 80) {
+            toast.warning(`You have used ${usageLimit.current}/${usageLimit.limit} document uploads this month (${Math.round(usageLimit.percentage)}%).`);
+          }
+        } else {
+          // Profile not loaded, proceed with warning
+          toast.warning('Profile not loaded. Upload will proceed with default free tier limits.');
+        }
+      } catch (error) {
+        console.error('Error checking usage limits:', error);
+        // Allow upload to continue with warning instead of blocking
+        toast.warning('Unable to verify upload limits. Upload will proceed but may be subject to restrictions.');
+      }
+
+      setIsCheckingLimits(false);
+      processFiles(acceptedFiles);
+    };
+
+    checkLimitsAndProcess();
+  }, [profile]);
+
+  const processFiles = useCallback((acceptedFiles: File[]) => {
     // Check file size limits based on subscription tier
-    const maxSize = profile?.subscription_tier 
+    const maxSize = profile?.subscription_tier
       ? FILE_UPLOAD.maxSize[profile.subscription_tier]
       : FILE_UPLOAD.maxSize.free;
 
@@ -77,7 +109,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
 
     const newFiles: UploadFile[] = validFiles.map(file => ({
       file,
-      id: Math.random().toString(36).substr(2, 9),
+      id: crypto.randomUUID(),
       progress: 0,
       status: 'pending'
     }));
@@ -94,7 +126,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
       'text/plain': ['.txt']
     },
     maxFiles,
-    disabled: isUploading
+    disabled: isUploading || isCheckingLimits || authLoading
   });
 
   const removeFile = (id: string) => {
@@ -254,14 +286,25 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
         <div
           {...getRootProps()}
           className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
-            isDragActive 
-              ? 'border-blue-500 bg-blue-50' 
+            isDragActive
+              ? 'border-blue-500 bg-blue-50'
               : 'border-gray-300 hover:border-gray-400'
-          } ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+          } ${(isUploading || isCheckingLimits || authLoading || !profile) ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
           <input {...getInputProps()} />
           <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-          {isDragActive ? (
+
+          {authLoading ? (
+            <div>
+              <p className="text-gray-600 mb-2">Loading user profile...</p>
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
+            </div>
+          ) : isCheckingLimits ? (
+            <div>
+              <p className="text-gray-600 mb-2">Checking upload limits...</p>
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
+            </div>
+          ) : isDragActive ? (
             <p className="text-blue-600">Drop the files here...</p>
           ) : (
             <div>
@@ -270,7 +313,7 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
               </p>
               <p className="text-sm text-gray-500">
                 Supports PDF, DOC, DOCX, TXT files up to{' '}
-                {Math.round((profile?.subscription_tier 
+                {Math.round((profile?.subscription_tier
                   ? FILE_UPLOAD.maxSize[profile.subscription_tier]
                   : FILE_UPLOAD.maxSize.free) / 1024 / 1024)}MB
               </p>

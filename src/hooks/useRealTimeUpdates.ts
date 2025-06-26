@@ -47,41 +47,13 @@ export function useRealTimeStatus(): RealTimeStatus {
   });
 
   useEffect(() => {
-    // Skip realtime connections in development to avoid console errors
-    if (import.meta.env.DEV) {
-      console.log('Skipping realtime connections in development');
-      setStatus({
-        isConnected: false,
-        connectionState: 'disabled',
-        lastUpdate: null
-      });
-      return;
-    }
-
-    // Connect to WebSocket
-    realtimeService.connect();
-
-    // Set up status polling
-    const statusInterval = setInterval(() => {
-      setStatus(prev => ({
-        ...prev,
-        isConnected: realtimeService.isConnected,
-        connectionState: realtimeService.connectionState
-      }));
-    }, 1000);
-
-    // Subscribe to all messages to track last update
-    const unsubscribe = realtimeService.subscribe('all', () => {
-      setStatus(prev => ({
-        ...prev,
-        lastUpdate: new Date().toISOString()
-      }));
+    // Skip realtime connections in production to avoid console errors
+    console.log('Skipping realtime connections - disabled in production');
+    setStatus({
+      isConnected: false,
+      connectionState: 'disabled',
+      lastUpdate: null
     });
-
-    return () => {
-      clearInterval(statusInterval);
-      unsubscribe();
-    };
   }, []);
 
   return status;

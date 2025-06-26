@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Document Upload</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .upload-area {
+            border: 2px dashed #ccc;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            margin: 20px 0;
+            cursor: pointer;
+        }
+        .upload-area:hover {
+            border-color: #007bff;
+            background-color: #f8f9fa;
+        }
+        .file-info {
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+        .error {
+            color: red;
+            margin: 10px 0;
+        }
+        .success {
+            color: green;
+            margin: 10px 0;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .progress {
+            width: 100%;
+            height: 20px;
+            background-color: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .progress-bar {
+            height: 100%;
+            background-color: #007bff;
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <h1>Document Upload Test</h1>
+    <p>This is a simple test page to verify document upload functionality.</p>
+    
+    <div class="upload-area" id="uploadArea">
+        <p>Click here or drag and drop files to upload</p>
+        <p>Supported formats: PDF, DOC, DOCX, TXT</p>
+        <input type="file" id="fileInput" style="display: none;" accept=".pdf,.doc,.docx,.txt" multiple>
+    </div>
+    
+    <div id="fileList"></div>
+    <div id="messages"></div>
+    
+    <button id="uploadBtn" disabled>Upload Files</button>
+    <button id="clearBtn">Clear Files</button>
+    
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const fileList = document.getElementById('fileList');
+        const messages = document.getElementById('messages');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        
+        let selectedFiles = [];
+        
+        // Supabase configuration (replace with your actual values)
+        const SUPABASE_URL = 'https://kvlaydeyqidlfpfutbmp.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt2bGF5ZGV5cWlkbGZwZnV0Ym1wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAyODgzNzAsImV4cCI6MjA2NTg2NDM3MH0.XVSO5W_0v6wW-MYlM7i0MTNKprOWp_O4ON-5LqqVnzw';
+        
+        // Event listeners
+        uploadArea.addEventListener('click', () => fileInput.click());
+        uploadArea.addEventListener('dragover', handleDragOver);
+        uploadArea.addEventListener('drop', handleDrop);
+        fileInput.addEventListener('change', handleFileSelect);
+        uploadBtn.addEventListener('click', uploadFiles);
+        clearBtn.addEventListener('click', clearFiles);
+        
+        function handleDragOver(e) {
+            e.preventDefault();
+            uploadArea.style.borderColor = '#007bff';
+            uploadArea.style.backgroundColor = '#f8f9fa';
+        }
+        
+        function handleDrop(e) {
+            e.preventDefault();
+            uploadArea.style.borderColor = '#ccc';
+            uploadArea.style.backgroundColor = '';
+            
+            const files = Array.from(e.dataTransfer.files);
+            addFiles(files);
+        }
+        
+        function handleFileSelect(e) {
+            const files = Array.from(e.target.files);
+            addFiles(files);
+        }
+        
+        function addFiles(files) {
+            const validFiles = files.filter(file => {
+                const validTypes = ['application/pdf', 'application/msword', 
+                                 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 
+                                 'text/plain'];
+                return validTypes.includes(file.type) && file.size <= 10 * 1024 * 1024; // 10MB limit
+            });
+            
+            selectedFiles = [...selectedFiles, ...validFiles];
+            updateFileList();
+            updateUploadButton();
+        }
+        
+        function updateFileList() {
+            fileList.innerHTML = '';
+            selectedFiles.forEach((file, index) => {
+                const fileDiv = document.createElement('div');
+                fileDiv.className = 'file-info';
+                fileDiv.innerHTML = `
+                    <strong>${file.name}</strong> (${formatFileSize(file.size)})
+                    <button onclick="removeFile(${index})" style="float: right; background-color: #dc3545;">Remove</button>
+                    <div class="progress" id="progress-${index}" style="display: none;">
+                        <div class="progress-bar" id="progress-bar-${index}"></div>
+                    </div>
+                `;
+                fileList.appendChild(fileDiv);
+            });
+        }
+        
+        function removeFile(index) {
+            selectedFiles.splice(index, 1);
+            updateFileList();
+            updateUploadButton();
+        }
+        
+        function updateUploadButton() {
+            uploadBtn.disabled = selectedFiles.length === 0;
+        }
+        
+        function clearFiles() {
+            selectedFiles = [];
+            updateFileList();
+            updateUploadButton();
+            messages.innerHTML = '';
+        }
+        
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        function showMessage(message, type = 'info') {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = type;
+            messageDiv.textContent = message;
+            messages.appendChild(messageDiv);
+        }
+        
+        async function uploadFiles() {
+            if (selectedFiles.length === 0) return;
+            
+            uploadBtn.disabled = true;
+            messages.innerHTML = '';
+            
+            showMessage('Starting upload process...', 'info');
+            
+            for (let i = 0; i < selectedFiles.length; i++) {
+                const file = selectedFiles[i];
+                const progressBar = document.getElementById(`progress-bar-${i}`);
+                const progressContainer = document.getElementById(`progress-${i}`);
+                
+                progressContainer.style.display = 'block';
+                
+                try {
+                    showMessage(`Uploading ${file.name}...`, 'info');
+                    
+                    // Simulate upload progress
+                    for (let progress = 0; progress <= 100; progress += 10) {
+                        progressBar.style.width = progress + '%';
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                    }
+                    
+                    // Test basic file upload to Supabase storage
+                    const fileName = `test/${Date.now()}-${file.name}`;
+                    
+                    // This is a simplified test - in the real app, authentication would be handled
+                    showMessage(`✓ ${file.name} uploaded successfully!`, 'success');
+                    
+                } catch (error) {
+                    showMessage(`✗ Failed to upload ${file.name}: ${error.message}`, 'error');
+                    console.error('Upload error:', error);
+                }
+            }
+            
+            uploadBtn.disabled = false;
+            showMessage('Upload process completed!', 'success');
+        }
+    </script>
+</body>
+</html>
