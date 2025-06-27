@@ -160,13 +160,18 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
 
         const document = await documentsApi.uploadDocument(uploadFile.file, uploadFile.documentType);
 
-        // Increment usage counter with new tracking service
-        const { usageTrackingService } = await import('@/lib/services/usageTracking');
-        await usageTrackingService.incrementUsage('document_upload', document.id, {
-          filename: uploadFile.file.name,
-          file_size: uploadFile.file.size,
-          document_type: uploadFile.documentType
-        });
+        // Increment usage counter with new tracking service (optional)
+        try {
+          const { usageTrackingService } = await import('@/lib/services/usageTracking');
+          await usageTrackingService.incrementUsage('document_upload', document.id, {
+            filename: uploadFile.file.name,
+            file_size: uploadFile.file.size,
+            document_type: uploadFile.documentType
+          });
+        } catch (usageError) {
+          console.warn('Usage tracking increment failed:', usageError);
+          // Continue with processing even if usage tracking fails
+        }
 
         // Stage 2: Start AI processing
         setUploadFiles(prev => prev.map(f =>

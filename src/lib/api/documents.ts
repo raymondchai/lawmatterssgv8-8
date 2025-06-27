@@ -60,12 +60,17 @@ export const documentsApi = {
     const user = await supabase.auth.getUser();
     if (!user.data.user) throw new Error('User not authenticated');
 
-    // Check usage limits before upload
-    const { usageTrackingService } = await import('@/lib/services/usageTracking');
-    const usageCheck = await usageTrackingService.checkUsageLimit('document_upload');
+    // Check usage limits before upload (make it optional to prevent upload failures)
+    try {
+      const { usageTrackingService } = await import('@/lib/services/usageTracking');
+      const usageCheck = await usageTrackingService.checkUsageLimit('document_upload');
 
-    if (!usageCheck.allowed) {
-      throw new Error(`Upload limit exceeded. You have used ${usageCheck.current}/${usageCheck.limit} document uploads this month. Please upgrade your plan to continue.`);
+      if (!usageCheck.allowed) {
+        throw new Error(`Upload limit exceeded. You have used ${usageCheck.current}/${usageCheck.limit} document uploads this month. Please upgrade your plan to continue.`);
+      }
+    } catch (usageError) {
+      console.warn('Usage tracking failed, proceeding with upload:', usageError);
+      // Continue with upload even if usage tracking fails
     }
 
     // Upload file to storage

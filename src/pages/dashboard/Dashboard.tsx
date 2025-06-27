@@ -152,12 +152,12 @@ const Dashboard: React.FC = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Button className="w-full" asChild>
-                    <Link to="/dashboard/ai-assistant">
+                  <Link to="/dashboard/ai-assistant" className="block">
+                    <Button className="w-full">
                       <MessageSquare className="mr-2 h-4 w-4" />
                       Start Chat
-                    </Link>
-                  </Button>
+                    </Button>
+                  </Link>
                 </CardContent>
               </Card>
 
@@ -169,12 +169,12 @@ const Dashboard: React.FC = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Button className="w-full" asChild>
-                    <Link to="/dashboard/templates">
+                  <Link to="/dashboard/templates" className="block">
+                    <Button className="w-full">
                       <Files className="mr-2 h-4 w-4" />
                       View Templates
-                    </Link>
-                  </Button>
+                    </Button>
+                  </Link>
                 </CardContent>
               </Card>
             </div>

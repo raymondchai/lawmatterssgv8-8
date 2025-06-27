@@ -277,25 +277,25 @@ const DebugAuth: React.FC = () => {
         <Card className="mb-6">
           <CardHeader>
             <CardTitle>Debug Tests</CardTitle>
-            <div className="flex flex-wrap gap-2 mt-2">
-              <Button onClick={runTests} disabled={isRunning} size="sm">
-                <RefreshCw className={`h-4 w-4 mr-2 ${isRunning ? 'animate-spin' : ''}`} />
-                {isRunning ? 'Running...' : 'Run Tests'}
-              </Button>
-              <Button onClick={testDocumentUpload} disabled={isRunning} size="sm" variant="outline">
-                <RefreshCw className={`h-4 w-4 mr-2 ${isRunning ? 'animate-spin' : ''}`} />
-                Test Upload
-              </Button>
-              <Button onClick={clearAllAuthData} disabled={isClearing} size="sm" variant="destructive">
-                <XCircle className={`h-4 w-4 mr-2 ${isClearing ? 'animate-spin' : ''}`} />
-                {isClearing ? 'Clearing...' : 'Clear Auth'}
-              </Button>
-            </div>
             <CardDescription>
               Testing authentication, database connection, and API functionality
             </CardDescription>
           </CardHeader>
           <CardContent>
+            <div className="flex flex-wrap gap-3 mb-4">
+              <Button onClick={runTests} disabled={isRunning} size="default">
+                <RefreshCw className={`h-4 w-4 mr-2 ${isRunning ? 'animate-spin' : ''}`} />
+                {isRunning ? 'Running...' : 'Run Tests'}
+              </Button>
+              <Button onClick={testDocumentUpload} disabled={isRunning} size="default" variant="outline">
+                <RefreshCw className={`h-4 w-4 mr-2 ${isRunning ? 'animate-spin' : ''}`} />
+                Test Upload
+              </Button>
+              <Button onClick={clearAllAuthData} disabled={isClearing} size="default" variant="destructive">
+                <XCircle className={`h-4 w-4 mr-2 ${isClearing ? 'animate-spin' : ''}`} />
+                {isClearing ? 'Clearing...' : 'Clear Auth'}
+              </Button>
+            </div>
             <div className="space-y-4">
               {testResults.map((result, index) => (
                 <div key={index} className="border rounded-lg p-4">
