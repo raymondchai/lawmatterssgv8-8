@@ -82,6 +82,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           keyLength: supabaseKey?.length || 0
         });
 
+        // Check if there's a flag to skip session restoration
+        const skipSessionRestore = localStorage.getItem('skipSessionRestore');
+
+        if (skipSessionRestore) {
+          console.log('Skipping session restoration as requested');
+          localStorage.removeItem('skipSessionRestore');
+          await supabase.auth.signOut();
+          setSession(null);
+          setUser(null);
+          setProfile(null);
+          setLoading(false);
+          return;
+        }
+
         const { data: { session }, error } = await supabase.auth.getSession();
 
         if (error) {
@@ -94,30 +108,41 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           return;
         }
 
-        // Validate session if it exists
+        // For production, be more strict about session validation
         if (session) {
-          // Check if session is still valid by making a test API call
-          try {
-            const { data: { user }, error: userError } = await supabase.auth.getUser();
-            if (userError || !user) {
-              // Session is invalid, clear it
-              console.log('Invalid session detected, clearing...');
-              await supabase.auth.signOut();
-              setSession(null);
-              setUser(null);
-              setProfile(null);
-            } else {
-              // Session is valid
-              setSession(session);
-              setUser(user);
-            }
-          } catch (validationError) {
-            console.error('Session validation failed:', validationError);
-            // Clear invalid session
+          // Check if session is recent (within last 24 hours)
+          const sessionAge = Date.now() - new Date(session.expires_at || 0).getTime();
+          const maxSessionAge = 24 * 60 * 60 * 1000; // 24 hours
+
+          if (sessionAge > maxSessionAge) {
+            console.log('Session too old, clearing...');
             await supabase.auth.signOut();
             setSession(null);
             setUser(null);
             setProfile(null);
+          } else {
+            // Validate session by making a test API call
+            try {
+              const { data: { user }, error: userError } = await supabase.auth.getUser();
+              if (userError || !user) {
+                console.log('Invalid session detected, clearing...');
+                await supabase.auth.signOut();
+                setSession(null);
+                setUser(null);
+                setProfile(null);
+              } else {
+                // Session is valid
+                console.log('Valid session found for user:', user.email);
+                setSession(session);
+                setUser(user);
+              }
+            } catch (validationError) {
+              console.error('Session validation failed:', validationError);
+              await supabase.auth.signOut();
+              setSession(null);
+              setUser(null);
+              setProfile(null);
+            }
           }
         } else {
           // No session
@@ -255,11 +280,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signOut = async () => {
     try {
+      // Sign out from Supabase
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
 
+      // Explicitly clear all auth state
+      setSession(null);
+      setUser(null);
       setProfile(null);
-      console.log('Sign out successful');
+      setRequiresTwoFactor(false);
+
+      // Clear all local storage
+      localStorage.clear();
+      sessionStorage.clear();
+
+      console.log('Sign out successful - all data cleared');
+
+      // Force page reload to ensure clean state
+      window.location.href = '/';
     } catch (error) {
       console.error('Sign out error:', error);
       throw error;

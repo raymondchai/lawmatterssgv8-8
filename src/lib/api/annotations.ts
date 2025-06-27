@@ -127,21 +127,13 @@ class AnnotationsApi {
     }
   }
 
-  // Real-time subscription for annotations
+  // Real-time subscription for annotations (disabled in production)
   subscribeToAnnotations(documentId: string, callback: (payload: any) => void) {
-    return supabase
-      .channel(`annotations:${documentId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'document_annotations',
-          filter: `document_id=eq.${documentId}`
-        },
-        callback
-      )
-      .subscribe();
+    console.log('Skipping annotations real-time subscription - disabled in production');
+    // Return a mock subscription object
+    return {
+      unsubscribe: () => console.log('Mock unsubscribe called')
+    };
   }
 
   // Get document collaborators

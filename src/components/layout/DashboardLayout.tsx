@@ -51,10 +51,13 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
 
   const handleSignOut = async () => {
     try {
+      console.log('Signing out from dashboard layout...');
       await signOut();
-      navigate('/');
+      // The signOut function now handles navigation automatically
     } catch (error) {
       console.error('Error signing out:', error);
+      // Fallback navigation if signOut fails
+      window.location.href = '/';
     }
   };
 

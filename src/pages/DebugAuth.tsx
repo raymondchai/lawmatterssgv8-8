@@ -15,9 +15,10 @@ interface TestResult {
 }
 
 const DebugAuth: React.FC = () => {
-  const { user, loading, profile } = useAuth();
+  const { user, loading, profile, signOut } = useAuth();
   const [testResults, setTestResults] = useState<TestResult[]>([]);
   const [isRunning, setIsRunning] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
 
   const runTests = async () => {
     setIsRunning(true);
@@ -101,6 +102,129 @@ const DebugAuth: React.FC = () => {
     setIsRunning(false);
   };
 
+  const clearAllAuthData = async () => {
+    setIsClearing(true);
+    try {
+      // Set flag to skip session restoration
+      localStorage.setItem('skipSessionRestore', 'true');
+
+      // Sign out from Supabase
+      await signOut();
+
+      // Clear all storage
+      localStorage.clear();
+      sessionStorage.clear();
+
+      // Clear any Supabase-specific storage
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('sb-') || key.includes('supabase')) {
+          localStorage.removeItem(key);
+        }
+      });
+
+      console.log('All authentication data cleared');
+
+      // Force reload to ensure clean state
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Error clearing auth data:', error);
+    } finally {
+      setIsClearing(false);
+    }
+  };
+
+  const testDocumentUpload = async () => {
+    const results: TestResult[] = [];
+
+    try {
+      // Test 1: Check authentication
+      const { data: { user } } = await supabase.auth.getUser();
+      results.push({
+        name: 'Authentication Check',
+        status: user ? 'success' : 'error',
+        message: user ? `Authenticated as ${user.email}` : 'Not authenticated'
+      });
+
+      if (!user) {
+        setTestResults(results);
+        return;
+      }
+
+      // Test 2: Check usage limits
+      const { usageTrackingService } = await import('@/lib/services/usageTracking');
+      const usageCheck = await usageTrackingService.checkUsageLimit('document_upload');
+      results.push({
+        name: 'Usage Limit Check',
+        status: usageCheck.allowed ? 'success' : 'error',
+        message: `${usageCheck.current}/${usageCheck.limit} uploads used (${Math.round(usageCheck.percentage)}%)`
+      });
+
+      // Test 3: Check storage bucket access
+      const testFileName = `test-${Date.now()}.txt`;
+      const testFile = new File(['test content'], testFileName, { type: 'text/plain' });
+
+      try {
+        const { error: uploadError } = await supabase.storage
+          .from('documents')
+          .upload(`${user.id}/${testFileName}`, testFile);
+
+        if (uploadError) {
+          results.push({
+            name: 'Storage Upload Test',
+            status: 'error',
+            message: `Storage upload failed: ${uploadError.message}`
+          });
+        } else {
+          results.push({
+            name: 'Storage Upload Test',
+            status: 'success',
+            message: 'Storage upload successful'
+          });
+
+          // Clean up test file
+          await supabase.storage
+            .from('documents')
+            .remove([`${user.id}/${testFileName}`]);
+        }
+      } catch (storageError: any) {
+        results.push({
+          name: 'Storage Upload Test',
+          status: 'error',
+          message: `Storage test failed: ${storageError.message}`
+        });
+      }
+
+      // Test 4: Check database access
+      try {
+        const { error: dbError } = await supabase
+          .from('uploaded_documents')
+          .select('id')
+          .limit(1);
+
+        results.push({
+          name: 'Database Access Test',
+          status: dbError ? 'error' : 'success',
+          message: dbError ? `Database error: ${dbError.message}` : 'Database access successful'
+        });
+      } catch (dbTestError: any) {
+        results.push({
+          name: 'Database Access Test',
+          status: 'error',
+          message: `Database test failed: ${dbTestError.message}`
+        });
+      }
+
+    } catch (error: any) {
+      results.push({
+        name: 'Upload Test Failed',
+        status: 'error',
+        message: error.message
+      });
+    }
+
+    setTestResults(results);
+  };
+
   useEffect(() => {
     if (!loading) {
       runTests();
@@ -152,13 +276,21 @@ const DebugAuth: React.FC = () => {
 
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              Debug Tests
+            <CardTitle>Debug Tests</CardTitle>
+            <div className="flex flex-wrap gap-2 mt-2">
               <Button onClick={runTests} disabled={isRunning} size="sm">
                 <RefreshCw className={`h-4 w-4 mr-2 ${isRunning ? 'animate-spin' : ''}`} />
                 {isRunning ? 'Running...' : 'Run Tests'}
               </Button>
-            </CardTitle>
+              <Button onClick={testDocumentUpload} disabled={isRunning} size="sm" variant="outline">
+                <RefreshCw className={`h-4 w-4 mr-2 ${isRunning ? 'animate-spin' : ''}`} />
+                Test Upload
+              </Button>
+              <Button onClick={clearAllAuthData} disabled={isClearing} size="sm" variant="destructive">
+                <XCircle className={`h-4 w-4 mr-2 ${isClearing ? 'animate-spin' : ''}`} />
+                {isClearing ? 'Clearing...' : 'Clear Auth'}
+              </Button>
+            </div>
             <CardDescription>
               Testing authentication, database connection, and API functionality
             </CardDescription>

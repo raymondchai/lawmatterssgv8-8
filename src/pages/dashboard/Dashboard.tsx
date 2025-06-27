@@ -20,9 +20,13 @@ const Dashboard: React.FC = () => {
 
   const handleSignOut = async () => {
     try {
+      console.log('Signing out from dashboard...');
       await signOut();
+      // The signOut function now handles navigation automatically
     } catch (error) {
       console.error('Error signing out:', error);
+      // Fallback navigation if signOut fails
+      window.location.href = '/';
     }
   };
 
@@ -148,9 +152,11 @@ const Dashboard: React.FC = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Button className="w-full">
-                    <MessageSquare className="mr-2 h-4 w-4" />
-                    Start Chat
+                  <Button className="w-full" asChild>
+                    <Link to="/dashboard/ai-assistant">
+                      <MessageSquare className="mr-2 h-4 w-4" />
+                      Start Chat
+                    </Link>
                   </Button>
                 </CardContent>
               </Card>
@@ -163,9 +169,11 @@ const Dashboard: React.FC = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Button className="w-full">
-                    <Files className="mr-2 h-4 w-4" />
-                    View Templates
+                  <Button className="w-full" asChild>
+                    <Link to="/dashboard/templates">
+                      <Files className="mr-2 h-4 w-4" />
+                      View Templates
+                    </Link>
                   </Button>
                 </CardContent>
               </Card>

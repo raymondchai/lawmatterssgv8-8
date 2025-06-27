@@ -52,6 +52,11 @@ class WebSocketService {
     // Disable WebSocket connections in production to avoid connection errors
     // WebSocket is only needed for real-time collaboration features
     console.log('WebSocket service initialized but connections disabled in production');
+
+    // Don't set up auth listener in production to avoid unnecessary connections
+    if (import.meta.env.DEV) {
+      this.setupAuthListener();
+    }
   }
 
   private setupAuthListener() {

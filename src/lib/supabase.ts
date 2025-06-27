@@ -28,6 +28,10 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     detectSessionInUrl: true,
     // Use dynamic site URL for redirects
     redirectTo: getSupabaseSiteUrl()
+  },
+  realtime: {
+    // Completely disable realtime to prevent WebSocket errors
+    enabled: false
   }
 });
 

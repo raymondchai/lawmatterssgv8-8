@@ -67,37 +67,9 @@ export function useDocumentProcessing(documentId?: string) {
   const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = realtimeService.subscribe('document_processing', (message: WebSocketMessage) => {
-      const update = message.payload as DocumentProcessingUpdate;
-      
-      setProcessingStates(prev => ({
-        ...prev,
-        [update.documentId]: {
-          status: update.status,
-          progress: update.progress,
-          message: update.message,
-          stage: update.stage,
-          error: update.error,
-          lastUpdate: message.timestamp
-        }
-      }));
-
-      // Update global processing state
-      setIsProcessing(update.status !== 'completed' && update.status !== 'failed');
-
-      // Show toast notifications for important updates
-      if (update.status === 'completed') {
-        toast.success('Document processing completed', {
-          description: update.message
-        });
-      } else if (update.status === 'failed') {
-        toast.error('Document processing failed', {
-          description: update.error || update.message
-        });
-      }
-    });
-
-    return unsubscribe;
+    // Skip real-time subscriptions - disabled in production
+    console.log('Skipping document processing real-time subscription - disabled');
+    return () => {}; // Return empty cleanup function
   }, []);
 
   // Get processing state for specific document
@@ -124,35 +96,9 @@ export function useAIQueryUpdates(queryId?: string) {
   const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = realtimeService.subscribe('ai_query', (message: WebSocketMessage) => {
-      const update = message.payload as AIQueryUpdate;
-      
-      setQueryStates(prev => ({
-        ...prev,
-        [update.queryId]: {
-          status: update.status,
-          progress: update.progress,
-          message: update.message,
-          response: update.response,
-          error: update.error,
-          lastUpdate: message.timestamp
-        }
-      }));
-
-      // Update global processing state
-      setIsProcessing(update.status === 'processing');
-
-      // Show toast notifications for completed queries
-      if (update.status === 'completed') {
-        toast.success('AI query completed');
-      } else if (update.status === 'failed') {
-        toast.error('AI query failed', {
-          description: update.error || update.message
-        });
-      }
-    });
-
-    return unsubscribe;
+    // Skip real-time subscriptions - disabled in production
+    console.log('Skipping AI query real-time subscription - disabled');
+    return () => {}; // Return empty cleanup function
   }, []);
 
   // Get query state for specific query
@@ -179,50 +125,9 @@ export function useSystemNotifications() {
   const notificationTimeouts = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
   useEffect(() => {
-    const unsubscribe = realtimeService.subscribe('system_notification', (message: WebSocketMessage) => {
-      const notification = message.payload as SystemNotification;
-      
-      // Add notification to state
-      setNotifications(prev => [notification, ...prev.slice(0, 9)]); // Keep last 10
-
-      // Show toast notification
-      const toastOptions = {
-        description: notification.message,
-        action: notification.action ? {
-          label: notification.action.label,
-          onClick: () => window.open(notification.action!.url, '_blank')
-        } : undefined
-      };
-
-      switch (notification.type) {
-        case 'success':
-          toast.success(notification.title, toastOptions);
-          break;
-        case 'warning':
-          toast.warning(notification.title, toastOptions);
-          break;
-        case 'error':
-          toast.error(notification.title, toastOptions);
-          break;
-        default:
-          toast.info(notification.title, toastOptions);
-      }
-
-      // Auto-remove notification after 30 seconds
-      const timeout = setTimeout(() => {
-        setNotifications(prev => prev.filter(n => n.id !== notification.id));
-        notificationTimeouts.current.delete(notification.id);
-      }, 30000);
-
-      notificationTimeouts.current.set(notification.id, timeout);
-    });
-
-    return () => {
-      unsubscribe();
-      // Clear all timeouts
-      notificationTimeouts.current.forEach(timeout => clearTimeout(timeout));
-      notificationTimeouts.current.clear();
-    };
+    // Skip real-time subscriptions - disabled in production
+    console.log('Skipping system notifications real-time subscription - disabled');
+    return () => {}; // Return empty cleanup function
   }, []);
 
   const dismissNotification = useCallback((notificationId: string) => {

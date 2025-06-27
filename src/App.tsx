@@ -37,6 +37,7 @@ import NotFound from "./pages/NotFound";
 import DebugAuth from "./pages/DebugAuth";
 import AuthTest from "./pages/AuthTest";
 import { ROUTES } from "@/lib/config/constants";
+import { AuthenticatedRoute } from "@/components/auth/ProtectedRoute";
 import "@/utils/errorTracking"; // Initialize error tracking
 
 // Import test utilities for debugging in production
@@ -84,47 +85,81 @@ const App = () => {
               <Route path="/debug/upload" element={<DebugUpload />} />
               <Route path="/debug-auth" element={<DebugAuth />} />
               <Route path="/auth-test" element={<AuthTest />} />
-              <Route path={ROUTES.dashboard} element={<Dashboard />} />
+              <Route path={ROUTES.dashboard} element={
+                <AuthenticatedRoute>
+                  <Dashboard />
+                </AuthenticatedRoute>
+              } />
               <Route path={ROUTES.documents} element={
-                <Suspense fallback={<div className="flex items-center justify-center h-screen">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                </div>}>
-                  <LazyDashboardDocuments />
-                </Suspense>
+                <AuthenticatedRoute>
+                  <Suspense fallback={<div className="flex items-center justify-center h-screen">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  </div>}>
+                    <LazyDashboardDocuments />
+                  </Suspense>
+                </AuthenticatedRoute>
               } />
               <Route path="/dashboard/ai-assistant" element={
-                <Suspense fallback={<div className="flex items-center justify-center h-screen">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                </div>}>
-                  <LazyAIAssistant />
-                </Suspense>
+                <AuthenticatedRoute>
+                  <Suspense fallback={<div className="flex items-center justify-center h-screen">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  </div>}>
+                    <LazyAIAssistant />
+                  </Suspense>
+                </AuthenticatedRoute>
               } />
               <Route path="/dashboard/templates" element={
-                <Suspense fallback={<div className="flex items-center justify-center h-screen">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                </div>}>
-                  <LazyTemplates />
-                </Suspense>
+                <AuthenticatedRoute>
+                  <Suspense fallback={<div className="flex items-center justify-center h-screen">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  </div>}>
+                    <LazyTemplates />
+                  </Suspense>
+                </AuthenticatedRoute>
               } />
-              <Route path="/dashboard/law-firms" element={<DashboardLawFirms />} />
+              <Route path="/dashboard/law-firms" element={
+                <AuthenticatedRoute>
+                  <DashboardLawFirms />
+                </AuthenticatedRoute>
+              } />
               <Route path="/dashboard/admin" element={
-                <Suspense fallback={<div className="flex items-center justify-center h-screen">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                </div>}>
-                  <LazyAdmin />
-                </Suspense>
+                <AuthenticatedRoute>
+                  <Suspense fallback={<div className="flex items-center justify-center h-screen">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  </div>}>
+                    <LazyAdmin />
+                  </Suspense>
+                </AuthenticatedRoute>
               } />
               <Route path="/dashboard/template-analytics" element={
-                <Suspense fallback={<div className="flex items-center justify-center h-screen">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                </div>}>
-                  <LazyTemplateAnalytics />
-                </Suspense>
+                <AuthenticatedRoute>
+                  <Suspense fallback={<div className="flex items-center justify-center h-screen">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  </div>}>
+                    <LazyTemplateAnalytics />
+                  </Suspense>
+                </AuthenticatedRoute>
               } />
-              <Route path="/dashboard/search-history" element={<SearchHistory />} />
-              <Route path="/dashboard/subscription" element={<Subscription />} />
-              <Route path="/dashboard/settings" element={<Settings />} />
-              <Route path="/dashboard/security" element={<SecuritySettings />} />
+              <Route path="/dashboard/search-history" element={
+                <AuthenticatedRoute>
+                  <SearchHistory />
+                </AuthenticatedRoute>
+              } />
+              <Route path="/dashboard/subscription" element={
+                <AuthenticatedRoute>
+                  <Subscription />
+                </AuthenticatedRoute>
+              } />
+              <Route path="/dashboard/settings" element={
+                <AuthenticatedRoute>
+                  <Settings />
+                </AuthenticatedRoute>
+              } />
+              <Route path="/dashboard/security" element={
+                <AuthenticatedRoute>
+                  <SecuritySettings />
+                </AuthenticatedRoute>
+              } />
               <Route path="/subscribe/:tier" element={<Subscribe />} />
               <Route path="/payment/success" element={<PaymentSuccess />} />
               <Route path="/payment/failure" element={<PaymentFailure />} />

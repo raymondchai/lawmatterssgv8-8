@@ -51,37 +51,6 @@ class RealTimeService {
     // Skip realtime subscriptions to avoid console errors
     console.log('Skipping document processing subscription - realtime disabled');
     return () => {}; // Return empty unsubscribe function
-
-    const channelName = `document_processing:${documentId}`;
-
-    if (!this.channels.has(channelName)) {
-      const channel = supabase
-        .channel(channelName)
-        .on(
-          'postgres_changes',
-          {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'uploaded_documents',
-            filter: `id=eq.${documentId}`
-          },
-          (payload) => {
-            const update: DocumentProcessingUpdate = {
-              document_id: documentId,
-              status: payload.new.processing_status,
-              progress: payload.new.processing_progress || 0,
-              stage: payload.new.processing_stage || 'upload',
-              error_message: payload.new.error_message
-            };
-            callback(update);
-          }
-        )
-        .subscribe();
-
-      this.channels.set(channelName, channel);
-    }
-
-    return () => this.unsubscribe(channelName);
   }
 
   // Subscribe to document annotations with real-time collaboration
@@ -89,69 +58,9 @@ class RealTimeService {
     documentId: string,
     callback: (event: RealTimeEvent) => void
   ): () => void {
-    // Skip realtime subscriptions in development to avoid console errors
-    if (import.meta.env.DEV) {
-      console.log('Skipping document annotations subscription in development');
-      return () => {}; // Return empty unsubscribe function
-    }
-
-    const channelName = `annotations:${documentId}`;
-
-    if (!this.channels.has(channelName)) {
-      const channel = supabase
-        .channel(channelName)
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'document_annotations',
-            filter: `document_id=eq.${documentId}`
-          },
-          (payload) => {
-            const event: RealTimeEvent = {
-              type: 'annotation_change',
-              payload: {
-                event_type: payload.eventType,
-                annotation: payload.new || payload.old,
-                document_id: documentId
-              },
-              timestamp: new Date().toISOString(),
-              user_id: payload.new?.user_id || payload.old?.user_id
-            };
-            callback(event);
-          }
-        )
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'annotation_replies'
-          },
-          (payload) => {
-            // Check if this reply belongs to an annotation on this document
-            if (payload.new?.annotation_id || payload.old?.annotation_id) {
-              const event: RealTimeEvent = {
-                type: 'annotation_change',
-                payload: {
-                  event_type: `reply_${payload.eventType}`,
-                  reply: payload.new || payload.old,
-                  document_id: documentId
-                },
-                timestamp: new Date().toISOString(),
-                user_id: payload.new?.user_id || payload.old?.user_id
-              };
-              callback(event);
-            }
-          }
-        )
-        .subscribe();
-
-      this.channels.set(channelName, channel);
-    }
-
-    return () => this.unsubscribe(channelName);
+    // Skip realtime subscriptions to avoid console errors
+    console.log('Skipping document annotations subscription - realtime disabled');
+    return () => {}; // Return empty unsubscribe function
   }
 
   // Subscribe to user presence for collaborative editing
@@ -160,45 +69,10 @@ class RealTimeService {
     currentUserId: string,
     callback: (presenceData: UserPresence[]) => void
   ): () => void {
-    const channelName = `presence:${documentId}`;
-    
-    if (!this.channels.has(channelName)) {
-      const channel = supabase
-        .channel(channelName)
-        .on('presence', { event: 'sync' }, () => {
-          const state = channel.presenceState();
-          const presenceList: UserPresence[] = [];
-          
-          Object.keys(state).forEach(userId => {
-            const presence = state[userId][0] as UserPresence;
-            presenceList.push(presence);
-          });
-          
-          callback(presenceList);
-        })
-        .on('presence', { event: 'join' }, ({ key, newPresences }) => {
-          console.log('User joined:', key, newPresences);
-        })
-        .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
-          console.log('User left:', key, leftPresences);
-        })
-        .subscribe(async (status) => {
-          if (status === 'SUBSCRIBED') {
-            // Track current user's presence
-            await channel.track({
-              user_id: currentUserId,
-              document_id: documentId,
-              status: 'online',
-              last_seen: new Date().toISOString(),
-              current_page: 1
-            });
-          }
-        });
+    // Skip realtime subscriptions to avoid console errors
+    console.log('Skipping user presence subscription - realtime disabled');
+    return () => {}; // Return empty unsubscribe function
 
-      this.channels.set(channelName, channel);
-    }
-
-    return () => this.unsubscribe(channelName);
   }
 
   // Update user presence (e.g., when changing pages)
@@ -206,12 +80,8 @@ class RealTimeService {
     documentId: string,
     updates: Partial<UserPresence>
   ): Promise<void> {
-    const channelName = `presence:${documentId}`;
-    const channel = this.channels.get(channelName);
-    
-    if (channel) {
-      await channel.track(updates);
-    }
+    // Skip realtime updates to avoid console errors
+    console.log('Skipping presence update - realtime disabled');
   }
 
   // Subscribe to system-wide notifications
@@ -219,29 +89,9 @@ class RealTimeService {
     userId: string,
     callback: (notification: any) => void
   ): () => void {
-    const channelName = `notifications:${userId}`;
-    
-    if (!this.channels.has(channelName)) {
-      const channel = supabase
-        .channel(channelName)
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'user_notifications',
-            filter: `user_id=eq.${userId}`
-          },
-          (payload) => {
-            callback(payload.new);
-          }
-        )
-        .subscribe();
-
-      this.channels.set(channelName, channel);
-    }
-
-    return () => this.unsubscribe(channelName);
+    // Skip realtime subscriptions to avoid console errors
+    console.log('Skipping system notifications subscription - realtime disabled');
+    return () => {}; // Return empty unsubscribe function
   }
 
   // Subscribe to collaboration updates (invitations, permission changes, etc.)
@@ -249,36 +99,9 @@ class RealTimeService {
     userId: string,
     callback: (update: CollaborationUpdate) => void
   ): () => void {
-    const channelName = `collaboration:${userId}`;
-    
-    if (!this.channels.has(channelName)) {
-      const channel = supabase
-        .channel(channelName)
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'annotation_collaborators',
-            filter: `user_id=eq.${userId}`
-          },
-          (payload) => {
-            const update: CollaborationUpdate = {
-              document_id: payload.new?.document_id || payload.old?.document_id,
-              user_id: userId,
-              action: payload.eventType === 'INSERT' ? 'joined' : 
-                      payload.eventType === 'DELETE' ? 'left' : 'editing',
-              metadata: payload.new || payload.old
-            };
-            callback(update);
-          }
-        )
-        .subscribe();
-
-      this.channels.set(channelName, channel);
-    }
-
-    return () => this.unsubscribe(channelName);
+    // Skip realtime subscriptions to avoid console errors
+    console.log('Skipping collaboration updates subscription - realtime disabled');
+    return () => {}; // Return empty unsubscribe function
   }
 
   // Broadcast a custom event to a channel
@@ -286,56 +109,38 @@ class RealTimeService {
     channelName: string,
     event: RealTimeEvent
   ): Promise<void> {
-    const channel = this.channels.get(channelName);
-    if (channel) {
-      await channel.send({
-        type: 'broadcast',
-        event: event.type,
-        payload: event
-      });
-    }
+    // Skip realtime broadcasts to avoid console errors
+    console.log('Skipping broadcast event - realtime disabled');
   }
 
   // Unsubscribe from a specific channel
   private unsubscribe(channelName: string): void {
-    const channel = this.channels.get(channelName);
-    if (channel) {
-      supabase.removeChannel(channel);
-      this.channels.delete(channelName);
-    }
+    // Skip unsubscribe operations - realtime disabled
+    console.log('Skipping unsubscribe - realtime disabled');
   }
 
   // Unsubscribe from all channels
   unsubscribeAll(): void {
-    this.channels.forEach((channel, channelName) => {
-      supabase.removeChannel(channel);
-    });
-    this.channels.clear();
-    this.eventListeners.clear();
-    this.presenceData.clear();
+    // Skip unsubscribe operations - realtime disabled
+    console.log('Skipping unsubscribe all - realtime disabled');
   }
 
   // Get current presence data for a document
   getPresenceData(documentId: string): UserPresence[] {
-    const channelName = `presence:${documentId}`;
-    const channel = this.channels.get(channelName);
-    
-    if (channel) {
-      const state = channel.presenceState();
-      return Object.keys(state).map(userId => state[userId][0] as UserPresence);
-    }
-    
+    // Return empty array - realtime disabled
     return [];
   }
 
   // Check if service is connected
   isConnected(): boolean {
-    return supabase.realtime.isConnected();
+    // Always return false - realtime disabled
+    return false;
   }
 
   // Get connection status
   getConnectionStatus(): string {
-    return supabase.realtime.channels[0]?.state || 'disconnected';
+    // Always return disabled - realtime disabled
+    return 'disabled';
   }
 }
 
