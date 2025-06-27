@@ -1,11 +1,11 @@
 import React from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useSafeAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabase';
 
 export const AuthDebug: React.FC = () => {
-  const { user, profile, session, loading, signOut } = useAuth();
+  const { user, profile, session, loading, signOut } = useSafeAuth();
 
   const clearSession = async () => {
     try {
@@ -13,6 +13,16 @@ export const AuthDebug: React.FC = () => {
       window.location.reload();
     } catch (error) {
       console.error('Error clearing session:', error);
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.warn('Sign out failed:', error);
+      // Fallback to direct supabase signout
+      await clearSession();
     }
   };
 
@@ -37,10 +47,15 @@ export const AuthDebug: React.FC = () => {
         <div>
           <strong>User ID:</strong> {user?.id || 'null'}
         </div>
-        <div className="mt-2">
+        <div className="mt-2 space-x-2">
           <Button onClick={clearSession} size="sm" variant="outline">
             Clear Session
           </Button>
+          {user && (
+            <Button onClick={handleSignOut} size="sm" variant="outline">
+              Sign Out
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>

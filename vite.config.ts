@@ -2,6 +2,23 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
+import { copyFileSync, existsSync } from "fs";
+
+// Custom plugin to copy .htaccess file
+const copyHtaccessPlugin = () => ({
+  name: 'copy-htaccess',
+  writeBundle() {
+    const htaccessSource = '.htaccess.craftchatbot';
+    const htaccessDest = 'dist/.htaccess';
+
+    if (existsSync(htaccessSource)) {
+      copyFileSync(htaccessSource, htaccessDest);
+      console.log('✅ .htaccess file copied to dist folder');
+    } else {
+      console.warn('⚠️ .htaccess.craftchatbot not found - skipping copy');
+    }
+  }
+});
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -13,8 +30,8 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [
     react(),
-    mode === 'development' &&
-    componentTagger(),
+    mode === 'development' && componentTagger(),
+    copyHtaccessPlugin(),
   ].filter(Boolean),
   resolve: {
     alias: {
@@ -86,8 +103,21 @@ export default defineConfig(({ mode }) => ({
         },
       },
     },
-    // Increase chunk size warning limit
+    // Increase chunk size warning limit to reduce noise
     chunkSizeWarningLimit: 1000,
+    // Disable source maps for production builds to reduce size
+    sourcemap: false,
+    // Optimize for production
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true, // Remove console.log in production
+        drop_debugger: true, // Remove debugger statements
+        pure_funcs: ['console.log', 'console.warn'], // Remove specific console methods
+      },
+    },
+    // Target modern browsers for better optimization
+    target: 'es2020',
   },
   // Optimize dependencies
   optimizeDeps: {

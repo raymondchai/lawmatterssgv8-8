@@ -14,56 +14,57 @@ interface ErrorLog {
 
 class ErrorTracker {
   private errors: ErrorLog[] = [];
-  private maxErrors = 50; // Keep only the last 50 errors
+  private readonly maxErrors = 50; // Keep only the last 50 errors
+  private readonly isEnabled: boolean;
 
   constructor() {
-    this.setupErrorHandlers();
+    // Only enable error tracking in development or when explicitly enabled
+    this.isEnabled = import.meta.env.DEV || import.meta.env.VITE_ERROR_TRACKING === 'true';
+
+    if (this.isEnabled) {
+      this.setupErrorHandlers();
+    }
   }
 
   private setupErrorHandlers() {
+    // Only capture critical JavaScript errors and unhandled promise rejections
+    // Remove console interception to reduce overhead
+
     // Capture JavaScript errors
     window.addEventListener('error', (event) => {
-      this.logError({
-        type: 'error',
-        message: event.message,
-        stack: event.error?.stack,
-        url: event.filename,
-        line: event.lineno,
-        column: event.colno,
-      });
+      // Only log errors that aren't from third-party scripts
+      if (event.filename && (event.filename.includes(window.location.origin) || event.filename === '')) {
+        this.logError({
+          type: 'error',
+          message: event.message,
+          stack: event.error?.stack,
+          url: event.filename,
+          line: event.lineno,
+          column: event.colno,
+        });
+      }
     });
 
     // Capture unhandled promise rejections
     window.addEventListener('unhandledrejection', (event) => {
-      this.logError({
-        type: 'error',
-        message: `Unhandled Promise Rejection: ${event.reason}`,
-        stack: event.reason?.stack,
-      });
+      // Filter out common non-critical rejections
+      const reason = String(event.reason);
+      if (!reason.includes('AbortError') && !reason.includes('NetworkError')) {
+        this.logError({
+          type: 'error',
+          message: `Unhandled Promise Rejection: ${event.reason}`,
+          stack: event.reason?.stack,
+        });
+      }
     });
 
-    // Capture console errors
-    const originalError = console.error;
-    const originalWarn = console.warn;
-
-    console.error = (...args) => {
-      this.logError({
-        type: 'error',
-        message: args.join(' '),
-      });
-      originalError.apply(console, args);
-    };
-
-    console.warn = (...args) => {
-      this.logError({
-        type: 'warning',
-        message: args.join(' '),
-      });
-      originalWarn.apply(console, args);
-    };
+    // Don't intercept console methods to reduce performance overhead
+    // Applications can use logError() and logWarning() explicitly when needed
   }
 
   private logError(errorData: Partial<ErrorLog>) {
+    if (!this.isEnabled) return;
+
     const error: ErrorLog = {
       timestamp: new Date().toISOString(),
       type: 'error',

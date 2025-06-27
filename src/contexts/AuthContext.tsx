@@ -32,6 +32,39 @@ export const useAuth = () => {
   return context;
 };
 
+// Optional auth hook that returns null instead of throwing error
+export const useOptionalAuth = () => {
+  const context = useContext(AuthContext);
+  return context || null;
+};
+
+// Safe auth hook that provides default values when no provider exists
+export const useSafeAuth = () => {
+  const context = useContext(AuthContext);
+
+  if (context === undefined) {
+    // Return safe defaults when no auth provider is available
+    return {
+      user: null,
+      profile: null,
+      session: null,
+      loading: false,
+      requiresTwoFactor: false,
+      signIn: async () => { throw new Error('Authentication not available'); },
+      signUp: async () => { throw new Error('Authentication not available'); },
+      signOut: async () => { throw new Error('Authentication not available'); },
+      resetPassword: async () => { throw new Error('Authentication not available'); },
+      updatePassword: async () => { throw new Error('Authentication not available'); },
+      refreshProfile: async () => { throw new Error('Authentication not available'); },
+      forceRefreshProfile: async () => { throw new Error('Authentication not available'); },
+      verifyTwoFactor: async () => { throw new Error('Authentication not available'); },
+      isTwoFactorEnabled: () => false,
+    };
+  }
+
+  return context;
+};
+
 interface AuthProviderProps {
   children: React.ReactNode;
 }

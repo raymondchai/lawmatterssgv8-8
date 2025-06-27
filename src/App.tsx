@@ -1,10 +1,10 @@
+import React, { Suspense, lazy } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { Suspense, lazy } from "react";
 import Index from "./pages/Index";
 import Pricing from "./pages/Pricing";
 import LawFirms from "./pages/LawFirms";
@@ -37,8 +37,9 @@ import NotFound from "./pages/NotFound";
 import DebugAuth from "./pages/DebugAuth";
 import AuthTest from "./pages/AuthTest";
 import { ROUTES } from "@/lib/config/constants";
-import { AuthenticatedRoute } from "@/components/auth/ProtectedRoute";
-import "@/utils/errorTracking"; // Initialize error tracking
+import { AuthenticatedRoute, OptionalAuthRoute } from "@/components/auth/ProtectedRoute";
+import ErrorBoundary from "@/components/ErrorBoundary";
+import AuthErrorBoundary from "@/components/auth/AuthErrorBoundary";
 
 // Import test utilities for debugging in production
 if (import.meta.env.DEV || import.meta.env.VITE_DEBUG_MODE === 'true') {
@@ -63,13 +64,15 @@ const queryClient = new QueryClient();
 
 const App = () => {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
+    <ErrorBoundary level="page">
+      <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <Toaster />
           <Sonner />
           <BrowserRouter>
-            <Routes>
+            <AuthErrorBoundary>
+              <AuthProvider>
+          <Routes>
               <Route path={ROUTES.home} element={<Index />} />
               <Route path="/law-firms" element={<LawFirms />} />
               <Route path="/law-firms/:id" element={<LawFirmProfile />} />
@@ -100,66 +103,38 @@ const App = () => {
                 </AuthenticatedRoute>
               } />
               <Route path="/dashboard/ai-assistant" element={
-                <AuthenticatedRoute>
-                  <Suspense fallback={<div className="flex items-center justify-center h-screen">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                  </div>}>
-                    <LazyAIAssistant />
-                  </Suspense>
-                </AuthenticatedRoute>
+                <Suspense fallback={<div className="flex items-center justify-center h-screen">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                </div>}>
+                  <LazyAIAssistant />
+                </Suspense>
               } />
               <Route path="/dashboard/templates" element={
-                <AuthenticatedRoute>
-                  <Suspense fallback={<div className="flex items-center justify-center h-screen">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                  </div>}>
-                    <LazyTemplates />
-                  </Suspense>
-                </AuthenticatedRoute>
+                <Suspense fallback={<div className="flex items-center justify-center h-screen">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                </div>}>
+                  <LazyTemplates />
+                </Suspense>
               } />
-              <Route path="/dashboard/law-firms" element={
-                <AuthenticatedRoute>
-                  <DashboardLawFirms />
-                </AuthenticatedRoute>
-              } />
+              <Route path="/dashboard/law-firms" element={<DashboardLawFirms />} />
               <Route path="/dashboard/admin" element={
-                <AuthenticatedRoute>
-                  <Suspense fallback={<div className="flex items-center justify-center h-screen">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                  </div>}>
-                    <LazyAdmin />
-                  </Suspense>
-                </AuthenticatedRoute>
+                <Suspense fallback={<div className="flex items-center justify-center h-screen">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                </div>}>
+                  <LazyAdmin />
+                </Suspense>
               } />
               <Route path="/dashboard/template-analytics" element={
-                <AuthenticatedRoute>
-                  <Suspense fallback={<div className="flex items-center justify-center h-screen">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                  </div>}>
-                    <LazyTemplateAnalytics />
-                  </Suspense>
-                </AuthenticatedRoute>
+                <Suspense fallback={<div className="flex items-center justify-center h-screen">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                </div>}>
+                  <LazyTemplateAnalytics />
+                </Suspense>
               } />
-              <Route path="/dashboard/search-history" element={
-                <AuthenticatedRoute>
-                  <SearchHistory />
-                </AuthenticatedRoute>
-              } />
-              <Route path="/dashboard/subscription" element={
-                <AuthenticatedRoute>
-                  <Subscription />
-                </AuthenticatedRoute>
-              } />
-              <Route path="/dashboard/settings" element={
-                <AuthenticatedRoute>
-                  <Settings />
-                </AuthenticatedRoute>
-              } />
-              <Route path="/dashboard/security" element={
-                <AuthenticatedRoute>
-                  <SecuritySettings />
-                </AuthenticatedRoute>
-              } />
+              <Route path="/dashboard/search-history" element={<SearchHistory />} />
+              <Route path="/dashboard/subscription" element={<Subscription />} />
+              <Route path="/dashboard/settings" element={<Settings />} />
+              <Route path="/dashboard/security" element={<SecuritySettings />} />
               <Route path="/subscribe/:tier" element={<Subscribe />} />
               <Route path="/payment/success" element={<PaymentSuccess />} />
               <Route path="/payment/failure" element={<PaymentFailure />} />
@@ -198,10 +173,12 @@ const App = () => {
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
+              </AuthProvider>
+            </AuthErrorBoundary>
           </BrowserRouter>
         </TooltipProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 };
 

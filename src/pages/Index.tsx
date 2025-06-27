@@ -9,10 +9,11 @@ import { Testimonials } from "@/components/sections/Testimonials";
 import { ContactSection } from "@/components/sections/ContactSection";
 import { Footer } from "@/components/layout/Footer";
 import { AuthDebug } from "@/components/debug/AuthDebug";
-import { useAuth } from "@/contexts/AuthContext";
+import { useSafeAuth } from "@/contexts/AuthContext";
+import AuthErrorBoundary from "@/components/auth/AuthErrorBoundary";
 
 const Index = () => {
-  const { user, loading } = useAuth();
+  const { user, loading } = useSafeAuth();
 
   // Debug log to console
   console.log('Index page - Auth state:', { user: user?.email || 'No user', loading });
@@ -28,7 +29,9 @@ const Index = () => {
       <Testimonials />
       <ContactSection />
       <Footer />
-      <AuthDebug />
+      <AuthErrorBoundary>
+        <AuthDebug />
+      </AuthErrorBoundary>
     </div>
   );
 };
