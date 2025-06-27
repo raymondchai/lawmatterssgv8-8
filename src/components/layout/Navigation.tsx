@@ -5,8 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu, User, Building2, FileText, MessageSquare, Search, Files } from "lucide-react";
-// Temporarily removed useAuth to isolate button visibility issue
-// import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 export const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -14,10 +13,7 @@ export const Navigation = () => {
   const [showSearch, setShowSearch] = useState(false);
   const navigate = useNavigate();
 
-  // Temporarily removed auth dependency to isolate button issue
-  // const { user, loading } = useAuth();
-  const user = null; // Force no user state to always show login buttons
-  const loading = false;
+  const { user, loading, signOut } = useAuth();
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -106,24 +102,51 @@ export const Navigation = () => {
             </div>
           </div>
 
-          {/* CTA Buttons - ALWAYS SHOW LOGIN BUTTONS */}
+          {/* CTA Buttons */}
           <div className="flex items-center space-x-2 flex-shrink-0 ml-4">
-            {/* Always show login buttons - no conditional logic */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate('/auth/login')}
-              className="px-4 py-2 text-sm font-medium whitespace-nowrap border-gray-300 hover:border-blue-600 hover:text-blue-600"
-            >
-              Sign In
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => navigate('/auth/register')}
-              className="bg-blue-600 hover:bg-blue-700 px-4 py-2 text-sm font-medium whitespace-nowrap"
-            >
-              Get Started
-            </Button>
+            {user ? (
+              // Show user menu when authenticated
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate('/dashboard')}
+                  className="px-4 py-2 text-sm font-medium whitespace-nowrap border-gray-300 hover:border-blue-600 hover:text-blue-600"
+                >
+                  <User className="h-4 w-4 mr-2" />
+                  Dashboard
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={signOut}
+                  className="px-4 py-2 text-sm font-medium whitespace-nowrap border-gray-300 hover:border-red-600 hover:text-red-600"
+                >
+                  Sign Out
+                </Button>
+              </div>
+            ) : (
+              // Show login buttons when not authenticated
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate('/auth/login')}
+                  className="px-4 py-2 text-sm font-medium whitespace-nowrap border-gray-300 hover:border-blue-600 hover:text-blue-600"
+                  disabled={loading}
+                >
+                  {loading ? 'Loading...' : 'Sign In'}
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => navigate('/auth/register')}
+                  className="bg-blue-600 hover:bg-blue-700 px-4 py-2 text-sm font-medium whitespace-nowrap"
+                  disabled={loading}
+                >
+                  {loading ? 'Loading...' : 'Get Started'}
+                </Button>
+              </>
+            )}
           </div>
 
           {/* Mobile menu button */}

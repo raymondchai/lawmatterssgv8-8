@@ -5,6 +5,8 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+  // Use relative paths for assets to work with any deployment setup
+  base: './',
   server: {
     host: "localhost",
     port: 8082,
@@ -89,8 +91,9 @@ export default defineConfig(({ mode }) => ({
   },
   // Optimize dependencies
   optimizeDeps: {
-    include: ['react', 'react-dom', 'react-router-dom'],
+    include: ['react', 'react-dom', 'react-router-dom', 'react/jsx-runtime'],
     exclude: ['tesseract.js', 'pdfjs-dist'], // Exclude heavy libraries from optimization
+    force: true, // Force re-optimization
   },
   // Handle Node.js polyfills and globals
   define: {
