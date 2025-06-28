@@ -29,7 +29,17 @@ export default defineConfig(({ mode }) => ({
     port: 8082,
   },
   plugins: [
-    react(),
+    react({
+      // Force consistent JSX runtime
+      jsxRuntime: 'automatic',
+      jsxImportSource: 'react',
+      // Ensure React is always available
+      babel: {
+        plugins: [
+          ['@babel/plugin-transform-react-jsx', { runtime: 'automatic' }]
+        ]
+      }
+    }),
     mode === 'development' && componentTagger(),
     copyHtaccessPlugin(),
   ].filter(Boolean),
@@ -51,55 +61,57 @@ export default defineConfig(({ mode }) => ({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: (id) => {
-          // PDF and OCR workers
-          if (id.includes('pdfjs-dist')) return 'pdf-worker';
-          if (id.includes('tesseract.js')) return 'ocr-worker';
+        // Normal Vite asset naming with content hashes
+        entryFileNames: `assets/[name]-[hash].js`,
+        chunkFileNames: `assets/[name]-[hash].js`,
+        assetFileNames: `assets/[name]-[hash].[ext]`,
+        manualChunks: {
+          // CRITICAL: React must be in a separate chunk that loads FIRST
+          'react-vendor': ['react', 'react-dom', 'react-dom/client', 'react/jsx-runtime'],
 
-          // Core React libraries
-          if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
-            return 'react-vendor';
-          }
+          // UI components that depend on React
+          'ui-components': [
+            '@radix-ui/react-accordion',
+            '@radix-ui/react-alert-dialog',
+            '@radix-ui/react-aspect-ratio',
+            '@radix-ui/react-avatar',
+            '@radix-ui/react-checkbox',
+            '@radix-ui/react-collapsible',
+            '@radix-ui/react-context-menu',
+            '@radix-ui/react-dialog',
+            '@radix-ui/react-dropdown-menu',
+            '@radix-ui/react-hover-card',
+            '@radix-ui/react-label',
+            '@radix-ui/react-menubar',
+            '@radix-ui/react-navigation-menu',
+            '@radix-ui/react-popover',
+            '@radix-ui/react-progress',
+            '@radix-ui/react-radio-group',
+            '@radix-ui/react-scroll-area',
+            '@radix-ui/react-select',
+            '@radix-ui/react-separator',
+            '@radix-ui/react-slider',
+            '@radix-ui/react-slot',
+            '@radix-ui/react-switch',
+            '@radix-ui/react-tabs',
+            '@radix-ui/react-toast',
+            '@radix-ui/react-toggle',
+            '@radix-ui/react-toggle-group',
+            '@radix-ui/react-tooltip',
+            'lucide-react',
+            'class-variance-authority',
+            'clsx',
+            'tailwind-merge'
+          ],
 
-          // UI component libraries
-          if (id.includes('@radix-ui') || id.includes('lucide-react')) {
-            return 'ui-components';
-          }
-
-          // Form and validation libraries
-          if (id.includes('react-hook-form') || id.includes('zod') || id.includes('@hookform')) {
-            return 'forms';
-          }
-
-          // Data fetching and state management
-          if (id.includes('@tanstack') || id.includes('react-query')) {
-            return 'data-fetching';
-          }
-
-          // Supabase and authentication
-          if (id.includes('@supabase') || id.includes('supabase')) {
-            return 'supabase';
-          }
-
-          // AI and OpenAI libraries
-          if (id.includes('openai') || id.includes('ai')) {
-            return 'ai-services';
-          }
-
-          // Date and utility libraries
-          if (id.includes('date-fns') || id.includes('lodash') || id.includes('uuid')) {
-            return 'utilities';
-          }
-
-          // Document processing libraries
-          if (id.includes('docx') || id.includes('jspdf') || id.includes('html2canvas')) {
-            return 'document-processing';
-          }
-
-          // Other large vendor libraries
-          if (id.includes('node_modules')) {
-            return 'vendor';
-          }
+          // Other chunks
+          'data-fetching': ['@tanstack/react-query'],
+          'forms': ['react-hook-form', '@hookform/resolvers', 'zod'],
+          'utilities': ['date-fns', 'lodash', 'uuid'],
+          'supabase': ['@supabase/supabase-js'],
+          'ai-services': ['openai'],
+          'pdf-worker': ['pdfjs-dist'],
+          'ocr-worker': ['tesseract.js']
         },
       },
     },
@@ -107,21 +119,34 @@ export default defineConfig(({ mode }) => ({
     chunkSizeWarningLimit: 1000,
     // Disable source maps for production builds to reduce size
     sourcemap: false,
-    // Optimize for production
+    // Conservative minification to prevent React issues
     minify: 'terser',
     terserOptions: {
       compress: {
-        drop_console: true, // Remove console.log in production
+        drop_console: false, // Keep console.log for debugging
         drop_debugger: true, // Remove debugger statements
-        pure_funcs: ['console.log', 'console.warn'], // Remove specific console methods
+        pure_funcs: [], // Don't remove any functions
+        keep_fnames: true, // Keep function names for React
+        keep_classnames: true, // Keep class names for React
+      },
+      mangle: {
+        keep_fnames: true, // Keep function names
+        keep_classnames: true, // Keep class names
       },
     },
     // Target modern browsers for better optimization
     target: 'es2020',
   },
-  // Optimize dependencies
+  // Optimize dependencies - CRITICAL FIX FOR REACT LOADING
   optimizeDeps: {
-    include: ['react', 'react-dom', 'react-router-dom', 'react/jsx-runtime'],
+    include: [
+      'react',
+      'react-dom',
+      'react-dom/client',
+      'react-router-dom',
+      'react/jsx-runtime',
+      'react/jsx-dev-runtime'
+    ],
     exclude: ['tesseract.js', 'pdfjs-dist'], // Exclude heavy libraries from optimization
     force: true, // Force re-optimization
   },

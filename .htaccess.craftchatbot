@@ -1,6 +1,15 @@
 # LawMattersSG on craftchatbot.com
 # SPA routing and security configuration
 
+# MIME Type Configuration - CRITICAL FIX FOR JAVASCRIPT LOADING
+AddType application/javascript .js
+AddType application/javascript .mjs
+AddType text/css .css
+AddType application/json .json
+AddType image/svg+xml .svg
+AddType font/woff .woff
+AddType font/woff2 .woff2
+
 # Enable HTTPS redirect
 RewriteEngine On
 RewriteCond %{HTTPS} off
@@ -35,11 +44,13 @@ RewriteRule . /index.html [L]
     AddOutputFilterByType DEFLATE application/json
 </IfModule>
 
-# Cache Control
+# Cache Control - Optimized for Production
 <IfModule mod_expires.c>
     ExpiresActive On
-    ExpiresByType text/css "access plus 1 year"
-    ExpiresByType application/javascript "access plus 1 year"
+    # Reasonable caching for JS/CSS with content hashes
+    ExpiresByType text/css "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+    # Long cache for images and fonts
     ExpiresByType image/png "access plus 1 year"
     ExpiresByType image/jpg "access plus 1 year"
     ExpiresByType image/jpeg "access plus 1 year"
