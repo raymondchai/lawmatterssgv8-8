@@ -248,11 +248,24 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
       } catch (error: any) {
         console.error('Upload/processing error:', error);
 
+        // Provide user-friendly error messages
+        let userMessage = error.message || 'Upload or processing failed';
+
+        if (error.message?.includes('Upload limit exceeded')) {
+          userMessage = 'You have reached your monthly upload limit. Please upgrade your plan to continue.';
+        } else if (error.message?.includes('File size exceeds')) {
+          userMessage = 'File is too large for your subscription tier. Please upgrade or use a smaller file.';
+        } else if (error.message?.includes('PDF processing failed')) {
+          userMessage = 'Failed to process PDF. Please ensure the file is not corrupted or password-protected.';
+        } else if (error.message?.includes('Failed to extract text')) {
+          userMessage = 'Could not extract text from the document. Please try a different file or contact support.';
+        }
+
         setUploadFiles(prev => prev.map(f =>
           f.id === uploadFile.id ? {
             ...f,
             status: 'error',
-            error: error.message ?? 'Upload or processing failed',
+            error: userMessage,
             processingMessage: 'Failed'
           } : f
         ));
@@ -265,11 +278,11 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
             status: 'failed',
             progress: 0,
             message: 'Document processing failed',
-            error: error.message ?? 'Upload or processing failed'
+            error: userMessage
           });
         }
 
-        toast.error(`Failed to process ${uploadFile.file.name}: ${error.message}`);
+        toast.error(`Failed to process ${uploadFile.file.name}: ${userMessage}`);
       }
     }
 

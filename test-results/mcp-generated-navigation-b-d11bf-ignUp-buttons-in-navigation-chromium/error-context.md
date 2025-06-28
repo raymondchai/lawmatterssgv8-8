@@ -1,0 +1,384 @@
+# Page snapshot
+
+```yaml
+- region "Notifications (F8)":
+  - list
+- navigation:
+  - link "LegalHelpSG":
+    - /url: /
+  - link "Home":
+    - /url: /
+  - link "Free Analysis":
+    - /url: /analyze
+    - img
+    - text: Free Analysis
+  - link "Templates":
+    - /url: /templates
+    - img
+    - text: Templates
+  - link "Law Firms":
+    - /url: /law-firms
+    - img
+    - text: Law Firms
+  - link "Documents":
+    - /url: /documents
+    - img
+    - text: Documents
+  - link "Legal Q&A":
+    - /url: /legal-qa
+    - img
+    - text: Legal Q&A
+  - link "Pricing":
+    - /url: /pricing
+  - button "Search":
+    - img
+    - text: Search
+  - button "Sign In"
+  - button "Get Started"
+- heading "AI-Powered Legal Solutions for Singapore" [level=1]
+- paragraph: Find the right law firm, get instant legal answers, and access legal document analysis - all in one place.
+- img
+- textbox "I need help understanding Singapore's Employment Act..."
+- button "Search"
+- paragraph: "Popular:"
+- button "Tenant Rights"
+- button "Company Incorporation"
+- button "Employment Act"
+- button "Divorce Proceedings"
+- button "Free Document Analysis":
+  - img
+  - text: Free Document Analysis
+- button "Ask Legal Question":
+  - text: Ask Legal Question
+  - img
+- button "Find Law Firms":
+  - text: Find Law Firms
+  - img
+- img
+- text: 500+ Legal Professionals
+- img
+- text: 10K+ Documents Simplified
+- img
+- text: 15K+ Questions Answered
+- heading "How can I help you today?" [level=3]
+- paragraph: I need help understanding Singapore's Employment Act...
+- img
+- text: "Popular: Tenant Rights • Company Incorporation"
+- paragraph: The Employment Act is Singapore's main labor law that provides basic terms and working conditions for employees. The Act was last amended in April 2019 to extend coverage to all employees regardless of salary level, with exceptions for public servants, domestic workers, and seafarers. Key provisions include...
+- button "Try the AI Legal Assistant →"
+- text: 🎉 Free Tool Available
+- heading "Try Our Free Document Analysis" [level=2]
+- paragraph: Get instant insights from your legal documents with our AI-powered analysis tool. No registration required, completely free to try.
+- button "Analyze Document Now":
+  - img
+  - text: Analyze Document Now
+  - img
+- img
+- heading "Instant Analysis" [level=3]
+- paragraph: Get document insights in seconds with AI-powered analysis
+- img
+- heading "Secure & Private" [level=3]
+- paragraph: Your documents are automatically deleted after 24 hours
+- img
+- heading "No Registration" [level=3]
+- paragraph: Start analyzing immediately without creating an account
+- img
+- heading "Multiple Formats" [level=3]
+- paragraph: Support for PDF, JPEG, PNG, and WebP files up to 10MB
+- heading "What You Get with Free Analysis" [level=3]
+- img
+- text: Extract text from PDFs and images
+- img
+- text: Generate document summaries
+- img
+- text: Identify key terms and concepts
+- img
+- text: Basic document classification
+- img
+- text: No credit card required
+- img
+- text: Try before you subscribe
+- img
+- heading "Want More?" [level=4]
+- paragraph: Upgrade to get advanced legal insights, unlimited analysis, and permanent storage.
+- button "View Pricing Plans →"
+- img
+- text: Sample Analysis Result
+- heading "Document Type" [level=4]
+- text: Employment Contract
+- heading "Key Terms Found" [level=4]
+- text: salary probation termination benefits
+- heading "Summary" [level=4]
+- paragraph: This employment contract outlines the terms and conditions of employment including salary, benefits, and termination clauses...
+- button "Try With Your Document"
+- heading "What Users Are Saying" [level=3]
+- img
+- img
+- img
+- img
+- img
+- paragraph: "\"The free analysis helped me understand my lease agreement before signing. Very helpful!\""
+- text: Sarah Chen Small Business Owner
+- img
+- img
+- img
+- img
+- img
+- paragraph: "\"Quick and easy way to get insights from legal documents. Saved me time and money.\""
+- text: Michael Tan Freelancer 1,000+ Documents Analyzed 95% Accuracy Rate 30s Average Analysis Time
+- heading "Everything You Need In One Place" [level=2]
+- paragraph: LegalHelpSG combines AI technology with comprehensive legal resources to give you the most efficient legal help experience.
+- img
+- heading "Law Firm Directory" [level=3]
+- paragraph: Find the perfect law firm with our comprehensive directory. Filter by practice area, location, and ratings.
+- list:
+  - listitem: Advanced Search Filters
+  - listitem: Verified Reviews & Ratings
+  - listitem: Direct Contact Information
+  - listitem: Specialization Matching
+- button "Browse Directory"
+- img
+- heading "Legal Document Analysis" [level=3]
+- paragraph: Upload your documents for instant AI-powered analysis, summary, and interpretation.
+- list:
+  - listitem: AI Document Summary
+  - listitem: Legal Risk Assessment
+  - listitem: Key Terms Extraction
+  - listitem: Compliance Checking
+- button "Analyze Documents"
+- img
+- heading "Legal Q&A" [level=3]
+- paragraph: Get instant answers to your legal questions from our AI assistant trained on Singapore law.
+- list:
+  - listitem: 24/7 AI Legal Assistant
+  - listitem: Singapore Law Expertise
+  - listitem: Case Law References
+  - listitem: Personalized Advice
+- button "Ask a Question"
+- img
+- heading "Document Templates" [level=3]
+- paragraph: Access a library of legal document templates specific to Singapore's legal system.
+- list:
+  - listitem: Singapore-Specific Templates
+  - listitem: Customizable Forms
+  - listitem: Legal Compliance Validation
+  - listitem: Instant Download
+- button "Browse Templates"
+- img
+- heading "Case Summaries" [level=3]
+- paragraph: Explore our database of court case summaries, without lengthy and easy to understand.
+- list:
+  - listitem: Simplified Case Summaries
+  - listitem: Search by Legal Topic
+  - listitem: Recent Court Decisions
+  - listitem: Legal Precedents
+- button "Explore Cases"
+- img
+- heading "Singapore-Specific Resources" [level=3]
+- paragraph: All resources are tailored specifically to Singapore's legal system and requirements.
+- list:
+  - listitem: Local Legal Updates
+  - listitem: Regulatory Changes
+  - listitem: Government Resources
+  - listitem: Legal Glossary
+- button "Learn More"
+- button "Get Started"
+- heading "How It Works" [level=2]
+- paragraph: LegalLinkSG makes accessing legal information and services easy for everyone
+- img
+- text: Step 1
+- heading "Identify Your Legal Need" [level=3]
+- paragraph: Browse our legal topics, use our search function, or start with a question to identify your specific legal need.
+- list:
+  - listitem: Search by legal topic or question
+  - listitem: Browse categories and case types
+  - listitem: Get instant topic suggestions
+  - listitem: Access legal glossary
+- img
+- img
+- text: Step 2
+- heading "Access Resources or Find Experts" [level=3]
+- paragraph: Use our AI-powered tools to get information, download templates, or find the right legal professional.
+- list:
+  - listitem: AI legal assistant for instant answers
+  - listitem: Download customizable legal templates
+  - listitem: Find qualified lawyers by specialty
+  - listitem: Access case summaries and precedents
+- img
+- img
+- text: Step 3
+- heading "Take Informed Action" [level=3]
+- paragraph: With clear information and the right resources, you can make confident decisions about your legal matters.
+- list:
+  - listitem: Make informed legal decisions
+  - listitem: Connect with verified professionals
+  - listitem: Download completed documents
+  - listitem: Track your legal progress
+- heading "Ready to get started?" [level=3]
+- paragraph: Join thousands of Singaporeans who are already using LegalLinkSG to navigate their legal matters.
+- button "Get Started Free"
+- button "Browse Law Firms"
+- heading "Trusted Legal Partners Since 1998" [level=2]
+- paragraph: LawMatters has been Singapore's premier legal firm for over two decades. We've built our reputation on delivering exceptional legal services with integrity, expertise, and unwavering commitment to our clients' success.
+- img
+- heading "Client-Focused Approach" [level=3]
+- paragraph: We prioritize understanding your unique needs and objectives.
+- img
+- heading "Proven Track Record" [level=3]
+- paragraph: Over 500 successful cases with a 95% client satisfaction rate.
+- img
+- heading "Expert Legal Team" [level=3]
+- paragraph: Qualified lawyers with specialized expertise across multiple practice areas.
+- button "Meet Our Team"
+- img
+- heading "25+" [level=3]
+- paragraph: Years of Excellence
+- img
+- heading "1000+" [level=3]
+- paragraph: Satisfied Clients
+- img
+- heading "500+" [level=3]
+- paragraph: Cases Won
+- img
+- heading "24/7" [level=3]
+- paragraph: Client Support
+- heading "What Our Clients Say" [level=2]
+- paragraph: Don't just take our word for it. Here's what our satisfied clients have to say about our legal services and expertise.
+- img
+- img
+- img
+- img
+- img
+- img
+- paragraph: "\"LawMatters provided exceptional guidance during our company's acquisition. Their expertise in corporate law and attention to detail made the complex process seamless.\""
+- text: S
+- heading "Sarah Chen" [level=4]
+- paragraph: CEO, TechStart Singapore
+- img
+- img
+- img
+- img
+- img
+- img
+- paragraph: "\"The real estate legal team at LawMatters helped us navigate multiple property transactions with professionalism and efficiency. Highly recommended!\""
+- text: M
+- heading "Michael Tan" [level=4]
+- paragraph: Property Developer
+- img
+- img
+- img
+- img
+- img
+- img
+- paragraph: "\"When I needed employment law advice, LawMatters provided clear, actionable guidance that protected my business. Their team is knowledgeable and responsive.\""
+- text: L
+- heading "Lisa Wong" [level=4]
+- paragraph: Small Business Owner
+- paragraph: Join hundreds of satisfied clients
+- img
+- img
+- img
+- img
+- img
+- text: 4.9/5 Client Rating
+- heading "Get In Touch" [level=2]
+- paragraph: Ready to discuss your legal needs? Contact us today for a free consultation and let us help you navigate your legal challenges.
+- heading "Send Us a Message" [level=3]
+- text: Full Name *
+- textbox "Full Name *"
+- text: Email Address *
+- textbox "Email Address *"
+- text: Phone Number
+- textbox "Phone Number"
+- text: Subject *
+- textbox "Subject *"
+- text: Message *
+- textbox "Message *"
+- button "Send Message"
+- img
+- heading "Phone" [level=3]
+- paragraph: +65 6123 4567
+- paragraph: +65 6765 4321
+- img
+- heading "Email" [level=3]
+- paragraph: info@lawmatters.sg
+- paragraph: consultation@lawmatters.sg
+- img
+- heading "Address" [level=3]
+- paragraph: "123 Raffles Place #45-67 Tower One Singapore 048624"
+- img
+- heading "Office Hours" [level=3]
+- paragraph: "Mon - Fri: 9:00 AM - 6:00 PM Sat: 9:00 AM - 1:00 PM Sun: Closed"
+- contentinfo:
+  - heading "LawMatters" [level=3]
+  - paragraph: Singapore's trusted legal partner for over 25 years. We provide expert legal solutions with integrity and excellence.
+  - link:
+    - /url: "#"
+    - img
+  - link:
+    - /url: "#"
+    - img
+  - link:
+    - /url: "#"
+    - img
+  - heading "Practice Areas" [level=4]
+  - list:
+    - listitem:
+      - link "Corporate Law":
+        - /url: "#"
+    - listitem:
+      - link "Employment Law":
+        - /url: "#"
+    - listitem:
+      - link "Real Estate Law":
+        - /url: "#"
+    - listitem:
+      - link "Family Law":
+        - /url: "#"
+    - listitem:
+      - link "Criminal Defense":
+        - /url: "#"
+    - listitem:
+      - link "Commercial Litigation":
+        - /url: "#"
+  - heading "Quick Links" [level=4]
+  - list:
+    - listitem:
+      - link "About Us":
+        - /url: "#"
+    - listitem:
+      - link "Our Team":
+        - /url: "#"
+    - listitem:
+      - link "Case Studies":
+        - /url: "#"
+    - listitem:
+      - link "Legal Resources":
+        - /url: "#"
+    - listitem:
+      - link "Privacy Policy":
+        - /url: "#"
+    - listitem:
+      - link "Terms of Service":
+        - /url: "#"
+  - heading "Contact Info" [level=4]
+  - img
+  - text: +65 6123 4567
+  - img
+  - text: info@lawmatters.sg
+  - img
+  - text: "123 Raffles Place #45-67 Tower One Singapore 048624"
+  - paragraph: © 2024 LawMatters Singapore. All rights reserved.
+- heading "Auth Debug Info" [level=3]
+- strong: "Loading:"
+- text: "false"
+- strong: "User:"
+- text: "null"
+- strong: "Session:"
+- text: "null"
+- strong: "Profile:"
+- text: "null"
+- strong: "User ID:"
+- text: "null"
+- button "Clear Session"
+```

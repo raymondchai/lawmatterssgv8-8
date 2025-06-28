@@ -60,13 +60,27 @@ export const documentsApi = {
     const user = await supabase.auth.getUser();
     if (!user.data.user) throw new Error('User not authenticated');
 
-    // Check usage limits before upload (make it optional to prevent upload failures)
+    // Check usage limits before upload with better error handling
     try {
       const { usageTrackingService } = await import('@/lib/services/usageTracking');
       const usageCheck = await usageTrackingService.checkUsageLimit('document_upload');
 
       if (!usageCheck.allowed) {
-        throw new Error(`Upload limit exceeded. You have used ${usageCheck.current}/${usageCheck.limit} document uploads this month. Please upgrade your plan to continue.`);
+        // Provide more specific error message based on subscription tier
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('subscription_tier, role')
+          .eq('id', user.data.user.id)
+          .single();
+
+        const tier = profile?.subscription_tier || 'free';
+        const isAdmin = profile?.role === 'super_admin' || profile?.role === 'admin';
+
+        if (isAdmin) {
+          console.warn('Admin user hit upload limit, allowing upload to proceed');
+        } else {
+          throw new Error(`Upload limit exceeded for ${tier} tier. You have used ${usageCheck.current}/${usageCheck.limit} document uploads this month. Please upgrade your plan to continue.`);
+        }
       }
     } catch (usageError) {
       console.warn('Usage tracking failed, proceeding with upload:', usageError);

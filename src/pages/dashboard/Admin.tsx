@@ -22,13 +22,13 @@ import { AdminLawFirmManager } from '@/components/lawfirms/AdminLawFirmManager';
 import { TemplateManagement } from '@/components/admin/TemplateManagement';
 import { TemplateAnalyticsDashboard } from '@/components/analytics';
 import { usePermissions, useRoleAccess, PERMISSIONS } from '@/hooks/usePermissions';
-import { useAuth } from '@/contexts/AuthContext';
+import { useSafeAuth } from '@/contexts/AuthContext';
 
 const Admin: React.FC = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const { hasPermission } = usePermissions();
   const { canAccessAdmin } = useRoleAccess();
-  const { profile } = useAuth();
+  const { profile } = useSafeAuth();
 
   // Check if user has admin access
   if (!canAccessAdmin()) {

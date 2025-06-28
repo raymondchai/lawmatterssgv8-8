@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface DiagnosticResult {
   category: string;
@@ -205,3 +205,5 @@ export const UploadDiagnostics: React.FC = () => {
     </Card>
   );
 };
+
+export default UploadDiagnostics;

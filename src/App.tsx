@@ -9,7 +9,7 @@ import Index from "./pages/Index";
 import Pricing from "./pages/Pricing";
 import LawFirms from "./pages/LawFirms";
 import LawFirmProfile from "./pages/LawFirmProfile";
-import Documents from "./pages/Documents";
+// Removed conflicting Documents import - using LazyDashboardDocuments instead
 import LegalQA from "./pages/LegalQA";
 import { QuestionDetail } from "./components/qa";
 import Login from "./pages/auth/Login";
@@ -37,6 +37,9 @@ import NotFound from "./pages/NotFound";
 import DebugAuth from "./pages/DebugAuth";
 import AuthTest from "./pages/AuthTest";
 import ClearAuth from "./pages/ClearAuth";
+import LogoutTest from "./pages/LogoutTest";
+import EmergencyLogout from "./pages/EmergencyLogout";
+import RAGKnowledge from "./pages/dashboard/RAGKnowledge";
 import { ROUTES } from "@/lib/config/constants";
 import { AuthenticatedRoute, OptionalAuthRoute } from "@/components/auth/ProtectedRoute";
 import ErrorBoundary from "@/components/ErrorBoundary";
@@ -77,7 +80,7 @@ const App = () => {
               <Route path={ROUTES.home} element={<Index />} />
               <Route path="/law-firms" element={<LawFirms />} />
               <Route path="/law-firms/:id" element={<LawFirmProfile />} />
-              <Route path="/documents" element={<Documents />} />
+              {/* Removed conflicting /documents route - use /dashboard/documents instead */}
               <Route path="/legal-qa" element={<LegalQA />} />
               <Route path="/legal-qa/:id" element={<QuestionDetail />} />
               <Route path={ROUTES.pricing} element={<Pricing />} />
@@ -90,6 +93,8 @@ const App = () => {
               <Route path="/debug-auth" element={<DebugAuth />} />
               <Route path="/auth-test" element={<AuthTest />} />
               <Route path="/clear-auth" element={<ClearAuth />} />
+              <Route path="/logout-test" element={<LogoutTest />} />
+              <Route path="/emergency-logout" element={<EmergencyLogout />} />
               <Route path={ROUTES.dashboard} element={
                 <AuthenticatedRoute>
                   <Dashboard />
@@ -134,6 +139,7 @@ const App = () => {
                 </Suspense>
               } />
               <Route path="/dashboard/search-history" element={<SearchHistory />} />
+              <Route path="/dashboard/rag-knowledge" element={<RAGKnowledge />} />
               <Route path="/dashboard/subscription" element={<Subscription />} />
               <Route path="/dashboard/settings" element={<Settings />} />
               <Route path="/dashboard/security" element={<SecuritySettings />} />

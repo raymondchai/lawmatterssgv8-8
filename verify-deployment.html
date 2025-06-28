@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LawMattersSG Deployment Verification</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 10px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .warning { background-color: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        .info { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background-color: #0056b3; }
+        #results { margin-top: 20px; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 4px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🏛️ LawMattersSG Deployment Verification</h1>
+    
+    <div class="test-section">
+        <h2>📋 Deployment Status</h2>
+        <div id="deployment-status">
+            <div class="info">Click "Run All Tests" to verify deployment status</div>
+        </div>
+        <button onclick="runAllTests()">Run All Tests</button>
+        <button onclick="testAssetLoading()">Test Asset Loading</button>
+        <button onclick="testMainApp()">Test Main App</button>
+        <button onclick="clearResults()">Clear Results</button>
+    </div>
+
+    <div id="results"></div>
+
+    <script>
+        function addResult(title, status, message, details = '') {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = 'test-section';
+            div.innerHTML = `
+                <h3>${title}</h3>
+                <div class="status ${status}">${message}</div>
+                ${details ? `<pre>${details}</pre>` : ''}
+            `;
+            results.appendChild(div);
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+            document.getElementById('deployment-status').innerHTML = '<div class="info">Results cleared. Click "Run All Tests" to verify deployment status</div>';
+        }
+
+        async function testAssetLoading() {
+            addResult('🔍 Asset Loading Test', 'info', 'Testing JavaScript module loading...');
+            
+            const assetsToTest = [
+                './assets/index-BTqhgZkx-1751126170205.js',
+                './assets/react-vendor-C9QDz5CC-1751126170205.js',
+                './assets/supabase-DdnzNYv--1751126170205.js',
+                './assets/ui-components-Ci6dFJZq-1751126170205.js'
+            ];
+
+            let successCount = 0;
+            let failureDetails = [];
+
+            for (const asset of assetsToTest) {
+                try {
+                    const response = await fetch(asset, { method: 'HEAD' });
+                    if (response.ok) {
+                        successCount++;
+                        console.log(`✅ ${asset} - Status: ${response.status}, Content-Type: ${response.headers.get('content-type')}`);
+                    } else {
+                        failureDetails.push(`❌ ${asset} - Status: ${response.status}`);
+                    }
+                } catch (error) {
+                    failureDetails.push(`❌ ${asset} - Error: ${error.message}`);
+                }
+            }
+
+            if (successCount === assetsToTest.length) {
+                addResult('✅ Asset Loading', 'success', `All ${successCount} critical assets loaded successfully`);
+            } else {
+                addResult('❌ Asset Loading', 'error', 
+                    `${successCount}/${assetsToTest.length} assets loaded successfully`, 
+                    failureDetails.join('\n'));
+            }
+        }
+
+        async function testMainApp() {
+            addResult('🚀 Main App Test', 'info', 'Testing React application initialization...');
+            
+            try {
+                // Test if React root element exists
+                const rootElement = document.getElementById('root');
+                if (!rootElement) {
+                    addResult('❌ React Root', 'error', 'Root element not found in DOM');
+                    return;
+                }
+
+                // Test if we can load the main module
+                const mainScript = document.querySelector('script[src*="index-BTqhgZkx-1751126170205.js"]');
+                if (!mainScript) {
+                    addResult('❌ Main Script', 'error', 'Main application script not found in HTML');
+                    return;
+                }
+
+                // Check if window.React is available (indicates successful loading)
+                setTimeout(() => {
+                    if (typeof window.React !== 'undefined') {
+                        addResult('✅ React Loading', 'success', 'React library loaded successfully');
+                    } else {
+                        addResult('⚠️ React Loading', 'warning', 'React library not detected in global scope (this may be normal with modern bundling)');
+                    }
+                }, 2000);
+
+                addResult('✅ App Structure', 'success', 'HTML structure and script references are correct');
+                
+            } catch (error) {
+                addResult('❌ Main App', 'error', `Application test failed: ${error.message}`);
+            }
+        }
+
+        async function runAllTests() {
+            clearResults();
+            document.getElementById('deployment-status').innerHTML = '<div class="info">🔄 Running deployment verification tests...</div>';
+            
+            addResult('🏁 Test Suite Started', 'info', `Starting comprehensive deployment verification at ${new Date().toLocaleString()}`);
+            
+            // Test 1: Asset Loading
+            await testAssetLoading();
+            
+            // Test 2: Main App
+            await testMainApp();
+            
+            // Test 3: Environment Check
+            addResult('🌐 Environment Check', 'info', 'Checking deployment environment...');
+            const envDetails = [
+                `URL: ${window.location.href}`,
+                `User Agent: ${navigator.userAgent}`,
+                `Timestamp: ${new Date().toISOString()}`,
+                `Protocol: ${window.location.protocol}`,
+                `Host: ${window.location.host}`
+            ];
+            addResult('📊 Environment Info', 'info', 'Deployment environment details', envDetails.join('\n'));
+            
+            // Update status
+            document.getElementById('deployment-status').innerHTML = '<div class="success">✅ Deployment verification completed. Check results below.</div>';
+        }
+
+        // Auto-run basic checks on page load
+        window.addEventListener('load', () => {
+            console.log('🏛️ LawMattersSG Deployment Verification Tool Loaded');
+            console.log('📍 Current URL:', window.location.href);
+            console.log('🕐 Load Time:', new Date().toISOString());
+        });
+    </script>
+</body>
+</html>

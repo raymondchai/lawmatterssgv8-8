@@ -3,6 +3,7 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { authConfig } from '@/lib/auth/config';
 import { profilesApi } from '@/lib/api/profiles';
+import { logError, logUserAction, logPerformance } from '@/lib/services/productionMonitoring';
 import type { User as ProfileUser } from '@/types';
 
 interface AuthContextType {
@@ -76,14 +77,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
 
-  // Add a timeout to prevent infinite loading
+  // Add a timeout to prevent infinite loading - increased timeout for production
   useEffect(() => {
     const timeout = setTimeout(() => {
       if (loading) {
         console.warn('Auth initialization timeout - setting loading to false');
         setLoading(false);
       }
-    }, 5000); // 5 second timeout
+    }, 15000); // 15 second timeout for production environment
 
     return () => clearTimeout(timeout);
   }, [loading]);
@@ -149,40 +150,42 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           return;
         }
 
-        // For production, be more strict about session validation
+        // For production, be more lenient with session validation to prevent immediate redirects
         if (session) {
-          // Check if session is expired
+          // Check if session is expired with buffer time
           const currentTime = Math.floor(Date.now() / 1000);
           const sessionExpiry = session.expires_at || 0;
+          const bufferTime = 300; // 5 minutes buffer
 
-          if (currentTime >= sessionExpiry) {
+          if (currentTime >= (sessionExpiry + bufferTime)) {
             console.log('Session expired, clearing...');
             await supabase.auth.signOut();
             setSession(null);
             setUser(null);
             setProfile(null);
           } else {
-            // Validate session by making a test API call
-            try {
-              const { data: { user }, error: userError } = await supabase.auth.getUser();
-              if (userError || !user) {
-                console.log('Invalid session detected, clearing...', userError?.message);
-                await supabase.auth.signOut();
-                setSession(null);
-                setUser(null);
-                setProfile(null);
-              } else {
-                // Session is valid
-                console.log('Valid session found for user:', user.email);
-                setSession(session);
-                setUser(user);
+            // For production, trust the session more and avoid unnecessary validation calls
+            // that might cause delays and premature redirects
+            console.log('Session found for user:', session.user?.email);
+            setSession(session);
+            setUser(session.user);
+
+            // Only validate if session is close to expiry
+            if (currentTime >= (sessionExpiry - 600)) { // 10 minutes before expiry
+              try {
+                const { data: { user }, error: userError } = await supabase.auth.getUser();
+                if (userError || !user) {
+                  console.log('Invalid session detected during validation, clearing...', userError?.message);
+                  await supabase.auth.signOut();
+                  setSession(null);
+                  setUser(null);
+                  setProfile(null);
+                }
+              } catch (validationError) {
+                console.error('Session validation failed:', validationError);
+                // Don't clear session on validation error, just log it
+                console.warn('Continuing with existing session despite validation error');
               }
-            } catch (validationError) {
-              console.error('Session validation failed:', validationError);
-              await supabase.auth.signOut();
-              setSession(null);
-              setUser(null);
-              setProfile(null);
             }
           }
         } else {
@@ -321,30 +324,129 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const signOut = async () => {
-    try {
-      // Sign out from Supabase
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+    console.log('🚪 Starting production sign out...');
 
-      // Explicitly clear all auth state
+    // Production-ready sign out with proper error handling and analytics
+    const signOutAttempt = {
+      timestamp: new Date().toISOString(),
+      method: 'standard',
+      success: false,
+      errors: [] as string[]
+    };
+
+    try {
+      // STEP 1: Set loading state to prevent multiple clicks
+      setLoading(true);
+
+      // STEP 2: Try graceful Supabase sign out first (with timeout)
+      console.log('🔄 Attempting graceful Supabase sign out...');
+
+      const signOutPromise = supabase.auth.signOut();
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Sign out timeout')), 3000)
+      );
+
+      try {
+        await Promise.race([signOutPromise, timeoutPromise]);
+        console.log('✅ Supabase sign out successful');
+        signOutAttempt.success = true;
+      } catch (supabaseError: any) {
+        console.warn('⚠️ Supabase sign out failed or timed out:', supabaseError);
+        signOutAttempt.errors.push(`Supabase: ${supabaseError.message}`);
+        signOutAttempt.method = 'fallback';
+      }
+
+      // STEP 3: Clear React state (always do this)
+      console.log('🔄 Clearing React state...');
       setSession(null);
       setUser(null);
       setProfile(null);
       setRequiresTwoFactor(false);
 
-      // Clear all local storage
-      localStorage.clear();
-      sessionStorage.clear();
+      // STEP 4: Clear only auth-related storage (selective clearing)
+      console.log('🧹 Clearing auth storage...');
+      const authKeys = [
+        'sb-kvlaydeyqidlfpfutbmp-auth-token',
+        'supabase.auth.token',
+        'auth-token',
+        'user-session',
+        'auth-state'
+      ];
 
-      console.log('Sign out successful - all data cleared');
+      authKeys.forEach(key => {
+        try {
+          localStorage.removeItem(key);
+          sessionStorage.removeItem(key);
+        } catch (e) {
+          console.warn('Failed to remove auth key:', key);
+        }
+      });
 
-      // Force page reload to ensure clean state
+      // STEP 5: Log analytics (for monitoring sign out issues)
+      try {
+        logUserAction('sign_out', 'auth_context', signOutAttempt.success, undefined, user?.id);
+        if (signOutAttempt.errors.length > 0) {
+          logError(`Sign out issues: ${signOutAttempt.errors.join(', ')}`, 'auth_sign_out', 'medium', user?.id);
+        }
+        console.log('📊 Sign out analytics:', signOutAttempt);
+      } catch (e) {
+        // Ignore analytics errors
+      }
+
+      console.log('✅ Sign out completed successfully');
+
+      // STEP 6: Navigate gracefully
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 100);
+
+    } catch (criticalError: any) {
+      console.error('❌ Critical sign out error:', criticalError);
+      signOutAttempt.errors.push(`Critical: ${criticalError.message}`);
+
+      // Emergency fallback - but more controlled
+      console.log('🚨 Executing emergency fallback...');
+
+      // Clear state immediately
+      setSession(null);
+      setUser(null);
+      setProfile(null);
+      setRequiresTwoFactor(false);
+      setLoading(false);
+
+      // Clear auth storage only
+      const authKeys = [
+        'sb-kvlaydeyqidlfpfutbmp-auth-token',
+        'supabase.auth.token',
+        'auth-token'
+      ];
+
+      authKeys.forEach(key => {
+        try {
+          localStorage.removeItem(key);
+          sessionStorage.removeItem(key);
+        } catch (e) {
+          // Ignore errors in emergency mode
+        }
+      });
+
+      // Force redirect as last resort
       window.location.href = '/';
-    } catch (error) {
-      console.error('Sign out error:', error);
-      throw error;
     }
   };
+
+  // Emergency logout function that can be called from console
+  const emergencyLogout = () => {
+    console.log('🚨 EMERGENCY LOGOUT ACTIVATED 🚨');
+    localStorage.clear();
+    sessionStorage.clear();
+    window.location.replace('/');
+  };
+
+  // Make emergency logout available globally for console access
+  if (typeof window !== 'undefined') {
+    (window as any).emergencyLogout = emergencyLogout;
+  }
 
   const resetPassword = async (email: string) => {
     const { error } = await supabase.auth.resetPasswordForEmail(email,

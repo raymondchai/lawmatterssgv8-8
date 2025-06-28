@@ -1,0 +1,128 @@
+# Page snapshot
+
+```yaml
+- region "Notifications (F8)":
+  - list
+- heading "Legal Document Templates" [level=1]
+- paragraph: Browse our comprehensive collection of Singapore-specific legal document templates. Customize, download, and use with confidence.
+- img
+- textbox "Search templates..."
+- combobox: All Categories
+- combobox: All
+- combobox: Most Popular
+- button:
+  - img
+- button:
+  - img
+- button "Advanced Filters":
+  - img
+  - text: Advanced Filters
+  - img
+- heading "Featured Templates" [level=2]
+- heading "Non-Disclosure Agreement" [level=3]
+- paragraph: A comprehensive NDA template for protecting confidential information
+- text: Featured
+- img
+- img
+- img
+- img
+- img
+- text: (0) Free
+- img
+- text: "0"
+- img
+- text: Business Agreements
+- heading "Employment Contract - Singapore" [level=3]
+- paragraph: Standard employment contract template compliant with Singapore Employment Act
+- text: Featured
+- img
+- img
+- img
+- img
+- img
+- text: (0) Free
+- img
+- text: "0"
+- img
+- text: Employment
+- heading "Rental Agreement - HDB" [level=3]
+- paragraph: HDB flat rental agreement template
+- text: Featured
+- img
+- img
+- img
+- img
+- img
+- text: (0) Free
+- img
+- text: "0"
+- img
+- text: Real Estate
+- heading "All Templates" [level=2]
+- paragraph: 5 templates found
+- heading "Non-Disclosure Agreement" [level=3]
+- paragraph: A comprehensive NDA template for protecting confidential information
+- text: Free
+- img
+- img
+- img
+- img
+- img
+- text: (0)
+- img
+- text: "0"
+- img
+- text: Business Agreements nda confidentiality business
+- heading "Employment Contract" [level=3]
+- paragraph: Standard employment contract template for Singapore
+- text: S$29.99 premium
+- img
+- img
+- img
+- img
+- img
+- text: (0)
+- img
+- text: "0"
+- img
+- text: Employment employment contract singapore
+- heading "Employment Contract - Singapore" [level=3]
+- paragraph: Standard employment contract template compliant with Singapore Employment Act
+- text: Free
+- img
+- img
+- img
+- img
+- img
+- text: (0)
+- img
+- text: "0"
+- img
+- text: Employment
+- heading "Non-Disclosure Agreement" [level=3]
+- paragraph: Comprehensive NDA template for business use
+- text: Free
+- img
+- img
+- img
+- img
+- img
+- text: (0)
+- img
+- text: "0"
+- img
+- text: Business Agreements
+- heading "Rental Agreement - HDB" [level=3]
+- paragraph: HDB flat rental agreement template
+- text: Free premium
+- img
+- img
+- img
+- img
+- img
+- text: (0)
+- img
+- text: "0"
+- img
+- text: Real Estate
+```

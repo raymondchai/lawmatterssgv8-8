@@ -42,40 +42,96 @@ export async function extractTextFromPDF(
     const pdfjsLib = await getPdfJs();
 
     if (!pdfjsLib) {
-      throw new Error('PDF.js failed to load');
+      throw new Error('PDF.js failed to load. Please refresh the page and try again.');
     }
 
+    onProgress?.({
+      status: 'initializing',
+      progress: 5,
+      message: 'Reading PDF file...'
+    });
+
     const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+    if (!arrayBuffer || arrayBuffer.byteLength === 0) {
+      throw new Error('PDF file appears to be empty or corrupted');
+    }
+
+    onProgress?.({
+      status: 'initializing',
+      progress: 10,
+      message: 'Parsing PDF document...'
+    });
+
+    const pdf = await pdfjsLib.getDocument({
+      data: arrayBuffer,
+      // Add error recovery options
+      verbosity: 0, // Reduce console noise
+      isEvalSupported: false, // Security
+      disableFontFace: true, // Performance
+      useSystemFonts: false // Consistency
+    }).promise;
     const totalPages = pdf.numPages;
-    
+
+    if (totalPages === 0) {
+      throw new Error('PDF document contains no pages');
+    }
+
+    if (totalPages > 100) {
+      throw new Error(`PDF document has too many pages (${totalPages}). Maximum supported is 100 pages.`);
+    }
+
     const pages: Array<{ pageNumber: number; text: string; confidence: number }> = [];
     let allText = '';
-    
-    for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
-      onProgress?.({
-        status: 'processing',
-        progress: (pageNum - 1) / totalPages * 100,
-        currentPage: pageNum,
-        totalPages,
-        message: `Processing page ${pageNum} of ${totalPages}...`
-      });
+    let processedPages = 0;
 
-      const page = await pdf.getPage(pageNum);
-      const textContent = await page.getTextContent();
-      
-      const pageText = textContent.items
-        .map((item: any) => item.str)
-        .join(' ')
-        .trim();
-      
-      pages.push({
-        pageNumber: pageNum,
-        text: pageText,
-        confidence: 0.95 // PDF text extraction is generally very reliable
-      });
-      
-      allText += pageText + '\n';
+    for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+      try {
+        onProgress?.({
+          status: 'processing',
+          progress: 15 + ((pageNum - 1) / totalPages * 80), // 15% to 95%
+          currentPage: pageNum,
+          totalPages,
+          message: `Processing page ${pageNum} of ${totalPages}...`
+        });
+
+        const page = await pdf.getPage(pageNum);
+        const textContent = await page.getTextContent();
+
+        const pageText = textContent.items
+          .map((item: any) => {
+            // Handle different text item types safely
+            if (typeof item === 'object' && item !== null) {
+              return item.str || item.text || '';
+            }
+            return String(item || '');
+          })
+          .filter(text => text.trim().length > 0)
+          .join(' ')
+          .trim();
+
+        pages.push({
+          pageNumber: pageNum,
+          text: pageText,
+          confidence: 0.95 // PDF text extraction is generally very reliable
+        });
+
+        allText += pageText + '\n';
+        processedPages++;
+
+      } catch (pageError) {
+        console.warn(`Failed to process page ${pageNum}:`, pageError);
+        // Continue with other pages, but record the issue
+        pages.push({
+          pageNumber: pageNum,
+          text: `[Page ${pageNum} could not be processed]`,
+          confidence: 0
+        });
+      }
+    }
+
+    if (processedPages === 0) {
+      throw new Error('Failed to process any pages from the PDF document');
     }
 
     const processingTime = Date.now() - startTime;
@@ -98,12 +154,35 @@ export async function extractTextFromPDF(
     };
   } catch (error) {
     console.error('Error extracting text from PDF:', error);
+
+    let errorMessage = 'Failed to extract text from PDF';
+
+    if (error instanceof Error) {
+      // Provide more specific error messages
+      if (error.message.includes('Invalid PDF')) {
+        errorMessage = 'The uploaded file is not a valid PDF document';
+      } else if (error.message.includes('Password')) {
+        errorMessage = 'This PDF is password protected. Please upload an unlocked PDF';
+      } else if (error.message.includes('corrupted')) {
+        errorMessage = 'The PDF file appears to be corrupted. Please try uploading again';
+      } else if (error.message.includes('too many pages')) {
+        errorMessage = error.message;
+      } else if (error.message.includes('PDF.js failed to load')) {
+        errorMessage = 'PDF processing library failed to load. Please refresh the page and try again';
+      } else if (error.message.includes('empty')) {
+        errorMessage = 'The PDF file appears to be empty';
+      } else {
+        errorMessage = `PDF processing failed: ${error.message}`;
+      }
+    }
+
     onProgress?.({
       status: 'error',
       progress: 0,
-      message: 'Failed to process PDF'
+      message: errorMessage
     });
-    throw new Error('Failed to extract text from PDF');
+
+    throw new Error(errorMessage);
   }
 }
 

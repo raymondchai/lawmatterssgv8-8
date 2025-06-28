@@ -17,13 +17,19 @@ export const Navigation = () => {
   const { user, loading, signOut } = useSafeAuth();
 
   const handleSignOut = async () => {
+    console.log('Navigation handleSignOut called');
     try {
+      console.log('Calling signOut from auth context...');
       await signOut();
-      navigate('/');
+      console.log('SignOut completed successfully');
+      // signOut now handles navigation via window.location.href = '/'
+      // so we don't need to navigate here
     } catch (error) {
-      console.warn('Sign out failed:', error);
-      // Fallback: just navigate to home
-      navigate('/');
+      console.error('Sign out failed:', error);
+      // signOut function now has robust fallbacks, so this shouldn't happen
+      // But if it does, force a page reload
+      console.log('Forcing page reload as final fallback...');
+      window.location.href = '/';
     }
   };
 
@@ -114,23 +120,54 @@ export const Navigation = () => {
             </div>
           </div>
 
-          {/* CTA Buttons - Temporarily simplified */}
+          {/* CTA Buttons - Dynamic based on auth state */}
           <div className="flex items-center space-x-2 flex-shrink-0 ml-4">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate('/auth/login')}
-              className="px-4 py-2 text-sm font-medium whitespace-nowrap border-gray-300 hover:border-blue-600 hover:text-blue-600"
-            >
-              Sign In
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => navigate('/auth/register')}
-              className="bg-blue-600 hover:bg-blue-700 px-4 py-2 text-sm font-medium whitespace-nowrap"
-            >
-              Get Started
-            </Button>
+            {user ? (
+              // Authenticated user buttons
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate('/dashboard')}
+                  className="px-4 py-2 text-sm font-medium whitespace-nowrap border-gray-300 hover:border-blue-600 hover:text-blue-600"
+                >
+                  Dashboard
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    console.log('Desktop Sign Out button clicked');
+                    e.preventDefault();
+                    handleSignOut();
+                  }}
+                  className="px-4 py-2 text-sm font-medium whitespace-nowrap border-red-300 hover:border-red-600 hover:text-red-600"
+                >
+                  Sign Out
+                </Button>
+              </>
+            ) : (
+              // Unauthenticated user buttons
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate('/auth/login')}
+                  className="px-4 py-2 text-sm font-medium whitespace-nowrap border-gray-300 hover:border-blue-600 hover:text-blue-600"
+                  disabled={loading}
+                >
+                  {loading ? 'Loading...' : 'Sign In'}
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => navigate('/auth/register')}
+                  className="bg-blue-600 hover:bg-blue-700 px-4 py-2 text-sm font-medium whitespace-nowrap"
+                  disabled={loading}
+                >
+                  {loading ? 'Loading...' : 'Get Started'}
+                </Button>
+              </>
+            )}
           </div>
 
           {/* Mobile menu button */}
@@ -177,16 +214,30 @@ export const Navigation = () => {
                   ))}
                   <div className="border-t pt-4 mt-4">
                     {user ? (
-                      <Button
-                        onClick={() => {
-                          navigate('/dashboard');
-                          setIsOpen(false);
-                        }}
-                        className="w-full mt-4 bg-blue-600 hover:bg-blue-700"
-                      >
-                        <User className="h-4 w-4 mr-2" />
-                        Dashboard
-                      </Button>
+                      <div className="space-y-2 mt-4">
+                        <Button
+                          onClick={() => {
+                            navigate('/dashboard');
+                            setIsOpen(false);
+                          }}
+                          className="w-full bg-blue-600 hover:bg-blue-700"
+                        >
+                          <User className="h-4 w-4 mr-2" />
+                          Dashboard
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={(e) => {
+                            console.log('Mobile Sign Out button clicked');
+                            e.preventDefault();
+                            handleSignOut();
+                            setIsOpen(false);
+                          }}
+                          className="w-full border-red-300 hover:border-red-600 hover:text-red-600"
+                        >
+                          Sign Out
+                        </Button>
+                      </div>
                     ) : (
                       <div className="space-y-2 mt-4">
                         <Button

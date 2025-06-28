@@ -39,6 +39,7 @@ import {
 } from '@/hooks/useDocumentProcessing';
 import { DOCUMENT_TYPES, PROCESSING_STATUS } from '@/lib/config/constants';
 import { formatDistanceToNow } from 'date-fns';
+import { supabase } from '@/lib/supabase';
 import type { UploadedDocument } from '@/types';
 import EnhancedDocumentUpload from './EnhancedDocumentUpload';
 
@@ -63,6 +64,7 @@ const DocumentManagementDashboard: React.FC = () => {
     dateRange: 'all'
   });
   const [showUpload, setShowUpload] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<any>(null);
 
   // Hooks with error handling
   const { data: documents = [], isLoading, error } = useDocuments();
@@ -81,6 +83,43 @@ const DocumentManagementDashboard: React.FC = () => {
       console.error('Stats loading error:', statsError);
     }
   }, [error, statsError]);
+
+  // Debug authentication and API connectivity
+  React.useEffect(() => {
+    const debugAuth = async () => {
+      try {
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        console.log('Current user:', user);
+        console.log('Auth error:', authError);
+
+        let apiTestResult = null;
+        if (user) {
+          // Test direct API call
+          const { data, error: apiError } = await supabase
+            .from('uploaded_documents')
+            .select('count')
+            .limit(1);
+          console.log('Direct API test:', { data, error: apiError });
+          apiTestResult = { data, error: apiError };
+        }
+
+        setDebugInfo({
+          user: user ? { id: user.id, email: user.email } : null,
+          authError,
+          apiTestResult,
+          timestamp: new Date().toISOString()
+        });
+      } catch (err) {
+        console.error('Debug auth error:', err);
+        setDebugInfo({
+          error: err instanceof Error ? err.message : 'Unknown error',
+          timestamp: new Date().toISOString()
+        });
+      }
+    };
+
+    debugAuth();
+  }, []);
 
   // Filtered and sorted documents
   const filteredDocuments = useMemo(() => {

@@ -1,14 +1,14 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthenticatedRoute } from '@/components/auth/ProtectedRoute';
-import { useAuth } from '@/contexts/AuthContext';
+import { useSafeAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { FileText, MessageSquare, Files, User, Home } from 'lucide-react';
 import { ROUTES } from '@/lib/config/constants';
 
 const Dashboard: React.FC = () => {
-  const { user, profile, signOut, loading } = useAuth();
+  const { user, profile, signOut, loading } = useSafeAuth();
   const navigate = useNavigate();
 
   // Debug logging

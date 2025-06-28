@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { chatWithAI } from '@/lib/api/openai';
 import { semanticSearch } from '@/lib/api/search';
+import { ragKnowledgeBase } from '@/lib/services/ragKnowledgeBase';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/components/ui/sonner';
 
@@ -107,20 +108,33 @@ How can I help you today?`,
     reset();
 
     try {
-      // Get relevant context from user's documents
+      // Get relevant context from user's documents AND knowledge base
       let relevantContext: string[] = [...contextDocuments];
-      
+
       if (data.message.length > 10) {
         try {
+          // Search user's documents
           const searchResults = await semanticSearch({
             query: data.message,
             userId: user.id,
             maxResults: 3,
             similarityThreshold: 0.6
           });
-          
+
           const contextChunks = searchResults.map(result => result.chunk_text);
           relevantContext = [...relevantContext, ...contextChunks];
+
+          // Search RAG knowledge base for additional context
+          const ragResults = await ragKnowledgeBase.searchKnowledge({
+            query: data.message,
+            maxResults: 3,
+            similarityThreshold: 0.7
+          });
+
+          const ragContext = ragResults.map(result =>
+            `[Knowledge Base - ${result.title}]: ${result.content}`
+          );
+          relevantContext = [...relevantContext, ...ragContext];
         } catch (searchError) {
           console.warn('Failed to get document context:', searchError);
           // Continue without document context

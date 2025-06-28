@@ -1,24 +1,28 @@
 # LawMattersSG on craftchatbot.com
 # SPA routing and security configuration
 
-# MIME Type Configuration - CRITICAL FIX FOR JAVASCRIPT LOADING
-AddType application/javascript .js
-AddType application/javascript .mjs
-AddType text/css .css
-AddType application/json .json
-AddType image/svg+xml .svg
-AddType font/woff .woff
-AddType font/woff2 .woff2
+# MIME Types for JavaScript modules (CRITICAL for React)
+<IfModule mod_mime.c>
+    AddType application/javascript .js
+    AddType application/javascript .mjs
+    AddType text/javascript .js
+    AddType text/javascript .mjs
+</IfModule>
 
 # Enable HTTPS redirect
 RewriteEngine On
 RewriteCond %{HTTPS} off
 RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
-# Handle React Router (SPA)
+# Handle React Router (SPA) - but allow static files
 RewriteEngine On
+# Don't rewrite files that exist
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
+# Don't rewrite .html files
+RewriteCond %{REQUEST_URI} !\.html$
+# Don't rewrite asset files
+RewriteCond %{REQUEST_URI} !^/assets/
 RewriteRule . /index.html [L]
 
 # Security Headers

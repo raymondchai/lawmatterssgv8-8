@@ -10,6 +10,7 @@ import DocumentManagementDashboard from '@/components/documents/DocumentManageme
 import ErrorBoundary from '@/components/ErrorBoundary';
 import DatabaseTest from '@/components/debug/DatabaseTest';
 import { UploadDebug } from '@/components/debug/UploadDebug';
+import UploadDiagnostics from '@/components/debug/UploadDiagnostics';
 import ProductionDiagnostics from '@/components/debug/ProductionDiagnostics';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -28,10 +29,10 @@ import {
   Menu
 } from 'lucide-react';
 import type { UploadedDocument } from '@/types';
-import { useAuth } from '@/contexts/AuthContext';
+import { useSafeAuth } from '@/contexts/AuthContext';
 
 const Documents: React.FC = () => {
-  const { profile, forceRefreshProfile } = useAuth();
+  const { profile, forceRefreshProfile } = useSafeAuth();
   const navigate = useNavigate();
   const [selectedDocument, setSelectedDocument] = useState<UploadedDocument | null>(null);
   const [searchResults, setSearchResults] = useState<UploadedDocument[]>([]);
@@ -339,6 +340,42 @@ const Documents: React.FC = () => {
                 <TabsContent value="debug" className="space-y-6">
                   {/* Debug Information */}
                   <div className="space-y-6">
+                    {/* Document Loading Debug */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-lg flex items-center">
+                          <AlertCircle className="h-5 w-5 mr-2" />
+                          Document Loading Debug
+                        </CardTitle>
+                        <CardDescription>
+                          Authentication and API connectivity status
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          <div className="p-4 bg-gray-50 rounded-lg">
+                            <h4 className="font-medium mb-2">Current Status:</h4>
+                            <div className="text-sm space-y-1">
+                              <div>Authentication: <span className="font-mono">{profile ? 'Authenticated' : 'Not authenticated'}</span></div>
+                              <div>User ID: <span className="font-mono">{profile?.id || 'N/A'}</span></div>
+                              <div>Email: <span className="font-mono">{profile?.email || 'N/A'}</span></div>
+                              <div>Subscription: <span className="font-mono">{profile?.subscription_tier || 'N/A'}</span></div>
+                            </div>
+                          </div>
+
+                          <div className="p-4 bg-blue-50 rounded-lg">
+                            <h4 className="font-medium mb-2">Troubleshooting:</h4>
+                            <div className="text-sm space-y-1">
+                              <div>• Check browser console for detailed error messages</div>
+                              <div>• Verify Supabase connection in Production Diagnostics below</div>
+                              <div>• Try uploading a test document to verify the upload process</div>
+                              <div>• Check if RLS policies are correctly configured</div>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
                     <UploadDiagnostics />
                     <UploadDebug />
                     <ProductionDiagnostics />

@@ -22,9 +22,10 @@ import {
   User,
   Shield,
   Search,
-  BarChart3
+  BarChart3,
+  Brain
 } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useSafeAuth } from '@/contexts/AuthContext';
 import { ConnectionStatus } from '@/components/realtime/ConnectionStatus';
 import { NotificationCenter } from '@/components/realtime/NotificationCenter';
 import { cn } from '@/lib/utils';
@@ -37,6 +38,7 @@ const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
   { name: 'Documents', href: '/dashboard/documents', icon: FileText },
   { name: 'AI Assistant', href: '/dashboard/ai-assistant', icon: MessageSquare },
+  { name: 'RAG Knowledge', href: '/dashboard/rag-knowledge', icon: Brain },
   { name: 'Templates', href: '/dashboard/templates', icon: Files },
   { name: 'Law Firms', href: '/dashboard/law-firms', icon: Building2 },
   { name: 'Legal Q&A', href: '/legal-qa', icon: MessageSquare },
@@ -45,7 +47,7 @@ const navigation = [
 ];
 
 export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, signOut } = useSafeAuth();
   const location = useLocation();
   const navigate = useNavigate();
 

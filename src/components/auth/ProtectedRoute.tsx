@@ -23,12 +23,14 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const location = useLocation();
 
   // Show loading spinner while checking authentication
+  // Be more patient with loading to prevent premature redirects
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center space-y-4">
           <Loader2 className="h-8 w-8 animate-spin" />
-          <p className="text-sm text-gray-600">Loading...</p>
+          <p className="text-sm text-gray-600">Checking authentication...</p>
+          <p className="text-xs text-gray-500">Please wait while we verify your session</p>
         </div>
       </div>
     );
