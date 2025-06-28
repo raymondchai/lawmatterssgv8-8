@@ -36,6 +36,7 @@ import SearchHistory from "./pages/dashboard/SearchHistory";
 import NotFound from "./pages/NotFound";
 import DebugAuth from "./pages/DebugAuth";
 import AuthTest from "./pages/AuthTest";
+import ClearAuth from "./pages/ClearAuth";
 import { ROUTES } from "@/lib/config/constants";
 import { AuthenticatedRoute, OptionalAuthRoute } from "@/components/auth/ProtectedRoute";
 import ErrorBoundary from "@/components/ErrorBoundary";
@@ -88,6 +89,7 @@ const App = () => {
               <Route path="/debug/upload" element={<DebugUpload />} />
               <Route path="/debug-auth" element={<DebugAuth />} />
               <Route path="/auth-test" element={<AuthTest />} />
+              <Route path="/clear-auth" element={<ClearAuth />} />
               <Route path={ROUTES.dashboard} element={
                 <AuthenticatedRoute>
                   <Dashboard />

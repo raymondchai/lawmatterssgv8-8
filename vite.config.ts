@@ -61,10 +61,10 @@ export default defineConfig(({ mode }) => ({
   build: {
     rollupOptions: {
       output: {
-        // Normal Vite asset naming with content hashes
-        entryFileNames: `assets/[name]-[hash].js`,
-        chunkFileNames: `assets/[name]-[hash].js`,
-        assetFileNames: `assets/[name]-[hash].[ext]`,
+        // Aggressive cache busting with timestamp and content hashes
+        entryFileNames: `assets/[name]-[hash]-${Date.now()}.js`,
+        chunkFileNames: `assets/[name]-[hash]-${Date.now()}.js`,
+        assetFileNames: `assets/[name]-[hash]-${Date.now()}.[ext]`,
         manualChunks: {
           // CRITICAL: React must be in a separate chunk that loads FIRST
           'react-vendor': ['react', 'react-dom', 'react-dom/client', 'react/jsx-runtime'],

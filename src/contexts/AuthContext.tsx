@@ -131,6 +131,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
         const { data: { session }, error } = await supabase.auth.getSession();
 
+        console.log('Initial session check:', {
+          hasSession: !!session,
+          sessionExpiry: session?.expires_at,
+          currentTime: Math.floor(Date.now() / 1000),
+          userEmail: session?.user?.email,
+          error: error?.message
+        });
+
         if (error) {
           console.error('Error getting session:', error);
           // Clear state and continue
@@ -143,12 +151,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
         // For production, be more strict about session validation
         if (session) {
-          // Check if session is recent (within last 24 hours)
-          const sessionAge = Date.now() - new Date(session.expires_at || 0).getTime();
-          const maxSessionAge = 24 * 60 * 60 * 1000; // 24 hours
+          // Check if session is expired
+          const currentTime = Math.floor(Date.now() / 1000);
+          const sessionExpiry = session.expires_at || 0;
 
-          if (sessionAge > maxSessionAge) {
-            console.log('Session too old, clearing...');
+          if (currentTime >= sessionExpiry) {
+            console.log('Session expired, clearing...');
             await supabase.auth.signOut();
             setSession(null);
             setUser(null);
@@ -158,7 +166,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             try {
               const { data: { user }, error: userError } = await supabase.auth.getUser();
               if (userError || !user) {
-                console.log('Invalid session detected, clearing...');
+                console.log('Invalid session detected, clearing...', userError?.message);
                 await supabase.auth.signOut();
                 setSession(null);
                 setUser(null);
@@ -178,7 +186,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             }
           }
         } else {
-          // No session
+          // No session found
+          console.log('No session found');
           setSession(null);
           setUser(null);
           setProfile(null);

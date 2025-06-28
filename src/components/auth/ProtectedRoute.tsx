@@ -19,7 +19,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   redirectTo = ROUTES.login,
   fallbackToGuest = false,
 }) => {
-  const { user, loading } = useSafeAuth();
+  const { user, loading, session } = useSafeAuth();
   const location = useLocation();
 
   // Show loading spinner while checking authentication
@@ -79,7 +79,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   // If authentication is not required but user is authenticated (e.g., login page)
-  if (!requireAuth && user) {
+  // Only redirect if we have both a valid user AND a valid session
+  if (!requireAuth && user && session) {
     // Redirect to dashboard if user is already logged in
     return <Navigate to={ROUTES.dashboard} replace />;
   }
