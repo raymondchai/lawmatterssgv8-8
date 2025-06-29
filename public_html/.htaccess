@@ -19,6 +19,10 @@ RewriteRule . /index.html [L]
     Header always set X-XSS-Protection "1; mode=block"
     Header always set Referrer-Policy "strict-origin-when-cross-origin"
     Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://api.ipify.org; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://kvlaydeyqidlfpfutbmp.supabase.co https://api.openai.com https://api.ipify.org https://js.stripe.com; frame-src https://js.stripe.com;"
+    Header always set Permissions-Policy "geolocation=(), microphone=(), camera=(), payment=(self)"
+    Header always set Cross-Origin-Embedder-Policy "require-corp"
+    Header always set Cross-Origin-Opener-Policy "same-origin"
 </IfModule>
 
 # Compression
@@ -60,3 +64,45 @@ RewriteRule . /index.html [L]
     Order allow,deny
     Deny from all
 </Files>
+
+<Files "*.log">
+    Order allow,deny
+    Deny from all
+</Files>
+
+<Files "*.sql">
+    Order allow,deny
+    Deny from all
+</Files>
+
+# Block common attack patterns
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Block SQL injection attempts
+    RewriteCond %{QUERY_STRING} (\<|%3C).*script.*(\>|%3E) [NC,OR]
+    RewriteCond %{QUERY_STRING} GLOBALS(=|\[|\%[0-9A-Z]{0,2}) [OR]
+    RewriteCond %{QUERY_STRING} _REQUEST(=|\[|\%[0-9A-Z]{0,2}) [OR]
+    RewriteCond %{QUERY_STRING} proc/self/environ [OR]
+    RewriteCond %{QUERY_STRING} mosConfig_[a-zA-Z_]{1,21}(=|\%3D) [OR]
+    RewriteCond %{QUERY_STRING} base64_(en|de)code[^(]*\([^)]*\) [OR]
+    RewriteCond %{QUERY_STRING} (<|%3C)([^s]*s)+cript.*(>|%3E) [NC,OR]
+    RewriteCond %{QUERY_STRING} (\<|%3C).*iframe.*(\>|%3E) [NC]
+    RewriteRule .* - [F]
+
+    # Block user agents
+    RewriteCond %{HTTP_USER_AGENT} ^$ [OR]
+    RewriteCond %{HTTP_USER_AGENT} ^(java|curl|wget) [NC,OR]
+    RewriteCond %{HTTP_USER_AGENT} (winhttp|HTTrack|clshttp|archiver|loader|email|harvest|extract|grab|miner) [NC]
+    RewriteRule .* - [F]
+</IfModule>
+
+# Rate limiting (basic)
+<IfModule mod_evasive24.c>
+    DOSHashTableSize    2048
+    DOSPageCount        20
+    DOSPageInterval     1
+    DOSSiteCount        50
+    DOSSiteInterval     1
+    DOSBlockingPeriod   600
+</IfModule>

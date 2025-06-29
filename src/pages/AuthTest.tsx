@@ -3,11 +3,27 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from "@/contexts/AuthContext";
 
 const AuthTest = () => {
-  const { user, loading, signIn, signOut } = useAuth();
+  // 🚨 EMERGENCY: Simplified state to avoid crashes
   const [email, setEmail] = useState('raymond.chai@8atoms.com');
   const [password, setPassword] = useState('');
   const [result, setResult] = useState<string>('');
   const [testing, setTesting] = useState(false);
+
+  // 🚨 EMERGENCY: Try-catch around useAuth to prevent crashes
+  let user = null;
+  let loading = false;
+  let signIn = null;
+  let signOut = null;
+
+  try {
+    const auth = useAuth();
+    user = auth.user;
+    loading = auth.loading;
+    signIn = auth.signIn;
+    signOut = auth.signOut;
+  } catch (error) {
+    console.error('🚨 AUTH CONTEXT ERROR:', error);
+  }
 
   useEffect(() => {
     // Initial environment check
@@ -112,209 +128,193 @@ const AuthTest = () => {
     setResult('');
   };
 
+  // 🚨 EMERGENCY: Super simple return to avoid crashes
   return (
-    <div style={{
-      minHeight: '100vh',
-      padding: '20px',
-      backgroundColor: '#f5f5f5',
-      fontFamily: 'Arial, sans-serif'
-    }}>
-      <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-        <h1 style={{
-          fontSize: '32px',
-          fontWeight: 'bold',
-          marginBottom: '30px',
+    <div style={{ padding: '20px', backgroundColor: '#f0f0f0', minHeight: '100vh' }}>
+      <h1 style={{ fontSize: '48px', color: '#000', textAlign: 'center', marginBottom: '30px' }}>
+        🚨 EMERGENCY AUTH TEST 🚨
+      </h1>
+
+      {/* 🚨 EMERGENCY STATUS */}
+      <div style={{
+        backgroundColor: '#ffff00',
+        padding: '20px',
+        marginBottom: '30px',
+        border: '5px solid #000',
+        fontSize: '24px',
+        fontWeight: 'bold'
+      }}>
+        <p>Loading: {loading ? "YES" : "NO"}</p>
+        <p>User: {user ? user.email : "NOT LOGGED IN"}</p>
+      </div>
+
+      {/* 🚨 EMERGENCY INPUTS - ABSOLUTE MAXIMUM VISIBILITY */}
+      <div style={{
+        backgroundColor: '#ff0000',
+        padding: '50px',
+        margin: '30px 0',
+        border: '10px solid #000000'
+      }}>
+        <h2 style={{
+          fontSize: '60px',
+          color: '#ffffff',
           textAlign: 'center',
-          color: '#333'
+          marginBottom: '40px',
+          fontWeight: 'bold'
         }}>
-          Auth Test Page
-        </h1>
+          🚨 INPUTS HERE 🚨
+        </h2>
 
-        {/* Auth Status */}
-        <div style={{
-          backgroundColor: 'white',
-          padding: '20px',
-          borderRadius: '8px',
-          marginBottom: '30px',
-          border: '2px solid #ddd',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-        }}>
-          <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '15px', color: '#333' }}>
-            Authentication Status
-          </h2>
-          <div style={{ color: '#666' }}>
-            <p><strong>Loading:</strong> {loading ? "Yes" : "No"}</p>
-            <p><strong>User:</strong> {user ? user.email : "Not logged in"}</p>
-          </div>
-        </div>
-
-        {/* Login Form - ALWAYS VISIBLE */}
-        <div style={{
-          backgroundColor: 'white',
-          padding: '30px',
-          borderRadius: '8px',
-          marginBottom: '30px',
-          border: '3px solid #007bff',
-          boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
-        }}>
-          <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '20px', color: '#333' }}>
-            🔐 LOGIN TEST FORM
-          </h2>
-
-          {/* Email Input - FORCED VISIBLE */}
-          <div style={{ marginBottom: '20px' }}>
-            <label htmlFor="email-field" style={{
-              display: 'block',
-              fontSize: '16px',
-              fontWeight: 'bold',
-              marginBottom: '8px',
-              color: '#333'
-            }}>
-              📧 Email Address:
-            </label>
-            <input
-              id="email-field"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter your email here..."
-              style={{
-                width: '100%',
-                padding: '15px',
-                fontSize: '18px',
-                border: '3px solid #007bff',
-                borderRadius: '6px',
-                backgroundColor: '#ffffff',
-                color: '#000000',
-                minHeight: '60px',
-                boxSizing: 'border-box'
-              }}
-            />
-          </div>
-
-          {/* Password Input - FORCED VISIBLE */}
-          <div style={{ marginBottom: '20px' }}>
-            <label htmlFor="password-field" style={{
-              display: 'block',
-              fontSize: '16px',
-              fontWeight: 'bold',
-              marginBottom: '8px',
-              color: '#333'
-            }}>
-              🔒 Password:
-            </label>
-            <input
-              id="password-field"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter your password here..."
-              style={{
-                width: '100%',
-                padding: '15px',
-                fontSize: '18px',
-                border: '3px solid #007bff',
-                borderRadius: '6px',
-                backgroundColor: '#ffffff',
-                color: '#000000',
-                minHeight: '60px',
-                boxSizing: 'border-box'
-              }}
-            />
-          </div>
-
-          {/* Buttons - FORCED VISIBLE */}
-          <div style={{ marginTop: '30px' }}>
-            <button
-              onClick={testDirectAuth}
-              disabled={testing}
-              style={{
-                width: '100%',
-                padding: '20px',
-                fontSize: '20px',
-                fontWeight: 'bold',
-                backgroundColor: testing ? '#ccc' : '#28a745',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: testing ? 'not-allowed' : 'pointer',
-                marginBottom: '15px',
-                minHeight: '70px'
-              }}
-            >
-              {testing ? '⏳ TESTING...' : '🚀 TEST LOGIN'}
-            </button>
-
-            <button
-              onClick={handleTestLogout}
-              disabled={testing}
-              style={{
-                width: '100%',
-                padding: '20px',
-                fontSize: '20px',
-                fontWeight: 'bold',
-                backgroundColor: testing ? '#ccc' : '#dc3545',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: testing ? 'not-allowed' : 'pointer',
-                marginBottom: '15px',
-                minHeight: '70px'
-              }}
-            >
-              {testing ? '⏳ TESTING...' : '🚪 TEST LOGOUT'}
-            </button>
-
-            <button
-              onClick={clearResults}
-              style={{
-                width: '100%',
-                padding: '20px',
-                fontSize: '20px',
-                fontWeight: 'bold',
-                backgroundColor: '#6c757d',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                minHeight: '70px'
-              }}
-            >
-              🗑️ CLEAR RESULTS
-            </button>
-          </div>
-        </div>
-
-        {/* Test Results - FORCED VISIBLE */}
-        <div style={{
-          backgroundColor: 'white',
-          padding: '30px',
-          borderRadius: '8px',
-          border: '3px solid #17a2b8',
-          boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
-        }}>
-          <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '20px', color: '#333' }}>
-            📊 TEST RESULTS
-          </h2>
-          <textarea
-            value={result}
-            readOnly
-            placeholder="Test results will appear here..."
+        {/* EMAIL */}
+        <div style={{ marginBottom: '40px' }}>
+          <label style={{
+            display: 'block',
+            fontSize: '40px',
+            color: '#ffffff',
+            fontWeight: 'bold',
+            marginBottom: '20px'
+          }}>
+            📧 EMAIL:
+          </label>
+          <input
+            type="email"
+            value={email || ''}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="TYPE EMAIL HERE"
             style={{
+              display: 'block',
               width: '100%',
-              height: '400px',
-              padding: '20px',
-              fontSize: '16px',
-              fontFamily: 'monospace',
-              border: '2px solid #17a2b8',
-              borderRadius: '6px',
-              backgroundColor: '#f8f9fa',
-              color: '#333',
-              resize: 'vertical',
+              height: '120px',
+              padding: '30px',
+              fontSize: '36px',
+              border: '10px solid #ffff00',
+              backgroundColor: '#ffffff',
+              color: '#000000',
+              fontWeight: 'bold',
               boxSizing: 'border-box'
             }}
           />
         </div>
+
+        {/* PASSWORD */}
+        <div style={{ marginBottom: '40px' }}>
+          <label style={{
+            display: 'block',
+            fontSize: '40px',
+            color: '#ffffff',
+            fontWeight: 'bold',
+            marginBottom: '20px'
+          }}>
+            🔒 PASSWORD:
+          </label>
+          <input
+            type="password"
+            value={password || ''}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="TYPE PASSWORD HERE"
+            style={{
+              display: 'block',
+              width: '100%',
+              height: '120px',
+              padding: '30px',
+              fontSize: '36px',
+              border: '10px solid #ffff00',
+              backgroundColor: '#ffffff',
+              color: '#000000',
+              fontWeight: 'bold',
+              boxSizing: 'border-box'
+            }}
+          />
+        </div>
+
+        {/* EMERGENCY BUTTONS */}
+        <div>
+          <button
+            onClick={testDirectAuth}
+            disabled={testing}
+            style={{
+              display: 'block',
+              width: '100%',
+              height: '150px',
+              padding: '40px',
+              fontSize: '48px',
+              fontWeight: 'bold',
+              backgroundColor: testing ? '#666666' : '#00ff00',
+              color: '#000000',
+              border: '10px solid #000000',
+              cursor: testing ? 'not-allowed' : 'pointer',
+              marginBottom: '30px'
+            }}
+          >
+            {testing ? '⏳ TESTING...' : '🚀 LOGIN TEST'}
+          </button>
+
+          <button
+            onClick={handleTestLogout}
+            disabled={testing}
+            style={{
+              display: 'block',
+              width: '100%',
+              height: '150px',
+              padding: '40px',
+              fontSize: '48px',
+              fontWeight: 'bold',
+              backgroundColor: testing ? '#666666' : '#ff6600',
+              color: '#000000',
+              border: '10px solid #000000',
+              cursor: testing ? 'not-allowed' : 'pointer',
+              marginBottom: '30px'
+            }}
+          >
+            {testing ? '⏳ TESTING...' : '🚪 LOGOUT TEST'}
+          </button>
+
+          <button
+            onClick={clearResults}
+            style={{
+              display: 'block',
+              width: '100%',
+              height: '150px',
+              padding: '40px',
+              fontSize: '48px',
+              fontWeight: 'bold',
+              backgroundColor: '#cccccc',
+              color: '#000000',
+              border: '10px solid #000000',
+              cursor: 'pointer',
+              marginBottom: '30px'
+            }}
+          >
+            🗑️ CLEAR
+          </button>
+        </div>
+      </div>
+
+      {/* RESULTS */}
+      <div style={{
+        backgroundColor: '#ffffff',
+        padding: '30px',
+        margin: '30px 0',
+        border: '5px solid #000000'
+      }}>
+        <h2 style={{ fontSize: '36px', marginBottom: '20px', color: '#000' }}>
+          📊 RESULTS
+        </h2>
+        <textarea
+          value={result || ''}
+          readOnly
+          placeholder="Results will appear here..."
+          style={{
+            width: '100%',
+            height: '300px',
+            padding: '20px',
+            fontSize: '18px',
+            border: '3px solid #000000',
+            backgroundColor: '#f0f0f0',
+            color: '#000000',
+            boxSizing: 'border-box'
+          }}
+        />
       </div>
     </div>
   );

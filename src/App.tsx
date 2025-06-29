@@ -18,6 +18,7 @@ import DebugUpload from "./pages/DebugUpload";
 import Register from "./pages/auth/Register";
 import ForgotPassword from "./pages/auth/ForgotPassword";
 import ResetPassword from "./pages/auth/ResetPassword";
+import EmailConfirm from "./pages/auth/EmailConfirm";
 import Dashboard from "./pages/dashboard/Dashboard";
 import DashboardLawFirms from "./pages/dashboard/LawFirms";
 import Subscription from "./pages/dashboard/Subscription";
@@ -90,6 +91,7 @@ const App = () => {
               <Route path={ROUTES.register} element={<Register />} />
               <Route path={ROUTES.forgotPassword} element={<ForgotPassword />} />
               <Route path={ROUTES.resetPassword} element={<ResetPassword />} />
+              <Route path="/auth/confirm" element={<EmailConfirm />} />
               <Route path="/debug" element={<Debug />} />
               <Route path="/debug/upload" element={<DebugUpload />} />
               <Route path="/debug-auth" element={<DebugAuth />} />

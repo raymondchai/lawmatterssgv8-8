@@ -13,6 +13,7 @@ import { Loader2, Eye, EyeOff, Shield, AlertTriangle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { sessionSecurityService } from '@/lib/services/sessionSecurity';
 import { TwoFactorVerification } from './TwoFactorVerification';
+import { EmailVerificationPrompt } from './EmailVerificationPrompt';
 import { ROUTES } from '@/lib/config/constants';
 
 const loginSchema = z.object({
@@ -27,6 +28,7 @@ export const LoginForm: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showTwoFactor, setShowTwoFactor] = useState(false);
+  const [showEmailVerification, setShowEmailVerification] = useState(false);
   const [userEmail, setUserEmail] = useState<string>('');
   const [rateLimitInfo, setRateLimitInfo] = useState<{
     attemptsRemaining: number;
@@ -122,7 +124,16 @@ export const LoginForm: React.FC = () => {
         navigate(ROUTES.dashboard);
       }
     } catch (err: any) {
-      setError(err.message ?? 'An error occurred during login');
+      const errorMessage = err.message ?? 'An error occurred during login';
+
+      // Check if it's an email verification error
+      if (errorMessage.includes('verify your email') || errorMessage.includes('Email not confirmed')) {
+        setUserEmail(data.email);
+        setShowEmailVerification(true);
+        setError(null); // Clear error since we're showing verification prompt
+      } else {
+        setError(errorMessage);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -138,12 +149,26 @@ export const LoginForm: React.FC = () => {
     setUserEmail('');
   };
 
+  const handleEmailVerificationBack = () => {
+    setShowEmailVerification(false);
+    setUserEmail('');
+  };
+
   if (showTwoFactor) {
     return (
       <TwoFactorVerification
         onVerificationSuccess={handleTwoFactorSuccess}
         onBack={handleTwoFactorBack}
         userEmail={userEmail}
+      />
+    );
+  }
+
+  if (showEmailVerification) {
+    return (
+      <EmailVerificationPrompt
+        email={userEmail}
+        onBack={handleEmailVerificationBack}
       />
     );
   }

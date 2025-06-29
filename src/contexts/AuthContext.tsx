@@ -21,6 +21,7 @@ interface AuthContextType {
   forceRefreshProfile: () => Promise<ProfileUser | null>;
   verifyTwoFactor: (token: string, backupCode?: string) => Promise<void>;
   isTwoFactorEnabled: () => boolean;
+  resendVerificationEmail: (email: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -297,7 +298,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (error) {
         console.error('Login error:', error);
+
+        // Handle email not confirmed error
+        if (error.message?.includes('Email not confirmed')) {
+          throw new Error('Please check your email and click the confirmation link before signing in.');
+        }
+
         throw error;
+      }
+
+      // Check if user email is verified
+      if (data.user && !data.user.email_confirmed_at) {
+        console.warn('User email not verified:', data.user.email);
+        await supabase.auth.signOut(); // Sign out unverified user
+        throw new Error('Please verify your email address before signing in. Check your inbox for a confirmation email.');
       }
 
       // For now, skip 2FA and security tracking to avoid console errors
@@ -488,6 +502,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return false;
   };
 
+  const resendVerificationEmail = async (email: string) => {
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/confirm`
+        }
+      });
+
+      if (error) {
+        console.error('Error resending verification email:', error);
+        throw error;
+      }
+
+      console.log('Verification email resent successfully');
+    } catch (error) {
+      console.error('Resend verification email error:', error);
+      throw error;
+    }
+  };
+
   // Force refresh profile from database (bypasses cache)
   const forceRefreshProfile = async (): Promise<ProfileUser | null> => {
     console.log('Force refreshing user profile from database...');
@@ -517,6 +553,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     forceRefreshProfile,
     verifyTwoFactor,
     isTwoFactorEnabled,
+    resendVerificationEmail,
   }), [
     user,
     profile,
@@ -532,6 +569,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     forceRefreshProfile,
     verifyTwoFactor,
     isTwoFactorEnabled,
+    resendVerificationEmail,
   ]);
 
   return (
