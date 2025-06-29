@@ -1,13 +1,36 @@
 import React from 'react';
+import { Navigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { KnowledgeBaseManager } from '@/components/rag/KnowledgeBaseManager';
 import { RAGChat } from '@/components/rag/RAGChat';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Brain, Database, MessageSquare, Info } from 'lucide-react';
+import { Brain, Database, MessageSquare, Info, Shield } from 'lucide-react';
+import { useSafeAuth } from '@/contexts/AuthContext';
 
 const RAGKnowledge: React.FC = () => {
+  const { profile, loading } = useSafeAuth();
+
+  // Show loading state while profile is being fetched
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <Brain className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+            <p className="text-gray-600">Loading RAG Knowledge System...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // Redirect non-admin users
+  if (!profile || (profile.role !== 'super_admin' && profile.role !== 'admin')) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   return (
     <DashboardLayout>
       <div className="space-y-6">

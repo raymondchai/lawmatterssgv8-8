@@ -197,15 +197,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setProfile(null);
         }
 
+        // Load profile if we have a valid user session
         if (session?.user) {
           try {
+            console.log('🔄 Loading profile during initialization for user:', session.user.email);
             await loadProfile();
+            console.log('✅ Profile loaded successfully during initialization');
           } catch (profileError) {
-            console.error('Error loading profile during initialization:', profileError);
-            // Continue without profile
+            console.error('❌ Error loading profile during initialization:', profileError);
+            // Set profile to null on error but don't throw
+            setProfile(null);
           }
         } else {
           // Explicitly set profile to null when no user
+          console.log('ℹ️ No user session, setting profile to null');
           setProfile(null);
         }
       } catch (error) {
@@ -232,19 +237,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (supabaseUrl && supabaseKey && !supabaseUrl.includes('placeholder') && !supabaseKey.includes('placeholder')) {
         const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(
           async (event, session) => {
-            console.log('Auth state change:', event, session?.user?.email || 'no user');
+            console.log('🔄 Auth state change:', event, session?.user?.email || 'no user');
 
             setSession(session);
             setUser(session?.user ?? null);
 
             if (session?.user) {
               try {
+                console.log('🔄 Loading profile after auth state change for user:', session.user.email);
                 await loadProfile();
+                console.log('✅ Profile loaded after auth state change');
               } catch (profileError) {
-                console.error('Error loading profile during auth change:', profileError);
-                // Continue without profile
+                console.error('❌ Error loading profile during auth change:', profileError);
+                // Set profile to null on error
+                setProfile(null);
               }
             } else {
+              console.log('ℹ️ No user in auth state change, clearing profile');
               setProfile(null);
             }
 
@@ -270,12 +279,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const loadProfile = async (retryCount = 0) => {
     try {
-      console.log('Loading user profile from database...', retryCount > 0 ? `(retry ${retryCount})` : '');
+      console.log('🔄 AuthContext - Loading user profile from database...', retryCount > 0 ? `(retry ${retryCount})` : '');
       const profileData = await profilesApi.getCurrentProfile();
-      setProfile(profileData);
-      console.log('Profile loaded successfully:', profileData?.email, 'Role:', profileData?.role);
+
+      // Ensure we have the correct role data
+      if (profileData) {
+        console.log('✅ AuthContext - Profile loaded successfully:', {
+          email: profileData.email,
+          role: profileData.role,
+          subscription_tier: profileData.subscription_tier,
+          id: profileData.id
+        });
+        setProfile(profileData);
+      } else {
+        console.warn('⚠️ AuthContext - Profile data is null or undefined');
+        setProfile(null);
+      }
     } catch (error) {
-      console.error('Error loading profile:', error);
+      console.error('❌ AuthContext - Error loading profile:', error);
 
       // Retry up to 2 times with exponential backoff
       if (retryCount < 2) {

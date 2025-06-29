@@ -145,7 +145,11 @@ const App = () => {
                 </Suspense>
               } />
               <Route path="/dashboard/search-history" element={<SearchHistory />} />
-              <Route path="/dashboard/rag-knowledge" element={<RAGKnowledge />} />
+              <Route path="/dashboard/rag-knowledge" element={
+                <AuthenticatedRoute>
+                  <RAGKnowledge />
+                </AuthenticatedRoute>
+              } />
               <Route path="/dashboard/subscription" element={<Subscription />} />
               <Route path="/dashboard/settings" element={<Settings />} />
               <Route path="/dashboard/security" element={<SecuritySettings />} />

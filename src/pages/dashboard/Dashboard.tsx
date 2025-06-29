@@ -1,15 +1,16 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthenticatedRoute } from '@/components/auth/ProtectedRoute';
 import { useSafeAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, MessageSquare, Files, User, Home } from 'lucide-react';
+import { FileText, MessageSquare, Files, User, Home, Brain } from 'lucide-react';
 import { ROUTES } from '@/lib/config/constants';
 
 const Dashboard: React.FC = () => {
-  const { user, profile, signOut, loading } = useSafeAuth();
+  const { user, profile, signOut, loading, forceRefreshProfile } = useSafeAuth();
   const navigate = useNavigate();
+  const [profileRefreshed, setProfileRefreshed] = useState(false);
 
   // Debug logging
   console.log('Dashboard - User:', user?.email);
@@ -17,6 +18,26 @@ const Dashboard: React.FC = () => {
   console.log('Dashboard - Profile Role:', profile?.role);
   console.log('Dashboard - Profile Subscription:', profile?.subscription_tier);
   console.log('Dashboard - Loading:', loading);
+
+  // Force refresh profile if role is missing or inconsistent
+  useEffect(() => {
+    const refreshProfileIfNeeded = async () => {
+      if (user && !profileRefreshed && (!profile?.role || profile.role === 'user')) {
+        console.log('Dashboard: Force refreshing profile due to missing/incorrect role data');
+        try {
+          await forceRefreshProfile();
+          setProfileRefreshed(true);
+        } catch (error) {
+          console.error('Dashboard: Error force refreshing profile:', error);
+        }
+      }
+    };
+
+    // Only run after initial loading is complete
+    if (!loading) {
+      refreshProfileIfNeeded();
+    }
+  }, [user, profile, forceRefreshProfile, profileRefreshed, loading]);
 
   const handleSignOut = async () => {
     try {
@@ -29,6 +50,21 @@ const Dashboard: React.FC = () => {
       window.location.href = '/';
     }
   };
+
+  // Show loading state while profile is being fetched
+  if (loading) {
+    return (
+      <AuthenticatedRoute>
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading your dashboard...</p>
+            <p className="text-sm text-gray-500 mt-2">Please wait while we fetch your profile</p>
+          </div>
+        </div>
+      </AuthenticatedRoute>
+    );
+  }
 
   return (
     <AuthenticatedRoute>
@@ -121,12 +157,18 @@ const Dashboard: React.FC = () => {
                   <p className="text-xs text-muted-foreground">
                     {profile?.role === 'super_admin' || profile?.role === 'admin' ? 'Administrative access' : 'Current plan'}
                   </p>
+                  {/* Debug info for role issues */}
+                  {process.env.NODE_ENV === 'development' && (
+                    <div className="mt-2 text-xs text-gray-400 border-t pt-2">
+                      Debug: Role={profile?.role}, Tier={profile?.subscription_tier}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
 
             {/* Quick Actions */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <Card>
                 <CardHeader>
                   <CardTitle>Upload Documents</CardTitle>
@@ -160,6 +202,26 @@ const Dashboard: React.FC = () => {
                   </Link>
                 </CardContent>
               </Card>
+
+              {/* RAG Knowledge Card - Only visible for super_admin users */}
+              {profile?.role === 'super_admin' && (
+                <Card className="border-2 border-blue-500">
+                  <CardHeader>
+                    <CardTitle className="text-blue-600">RAG Knowledge</CardTitle>
+                    <CardDescription>
+                      Manage AI knowledge base and test responses
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Link to="/dashboard/rag-knowledge" className="block">
+                      <Button className="w-full bg-blue-600 hover:bg-blue-700">
+                        <Brain className="mr-2 h-4 w-4" />
+                        RAG Knowledge
+                      </Button>
+                    </Link>
+                  </CardContent>
+                </Card>
+              )}
 
               <Card>
                 <CardHeader>

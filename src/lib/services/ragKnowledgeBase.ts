@@ -4,7 +4,6 @@
  */
 
 import { supabase } from '@/lib/supabase';
-import { generateEmbedding } from '@/lib/api/openai';
 import { logError, logPerformance } from '@/lib/services/productionMonitoring';
 
 export interface KnowledgeChunk {
@@ -67,6 +66,7 @@ class RAGKnowledgeBaseService {
         const chunk = chunks[i];
         
         // Generate embedding for the chunk
+        const { generateEmbedding } = await import('@/lib/api/openai');
         const { embedding } = await generateEmbedding(chunk);
         
         // Store in database
@@ -123,6 +123,7 @@ class RAGKnowledgeBaseService {
       } = options;
 
       // Generate embedding for the query
+      const { generateEmbedding } = await import('@/lib/api/openai');
       const { embedding: queryEmbedding } = await generateEmbedding(query);
 
       // Build the RPC call parameters
@@ -299,6 +300,7 @@ Please provide a comprehensive answer based on the context provided. Include:
 
       // If content is updated, regenerate embedding
       if (updates.content) {
+        const { generateEmbedding } = await import('@/lib/api/openai');
         const { embedding } = await generateEmbedding(updates.content);
         updateData.embedding = embedding;
       }
