@@ -34,3 +34,4 @@ bun.lockb
 .env.development
 .env.staging
 .env.production
+.env
