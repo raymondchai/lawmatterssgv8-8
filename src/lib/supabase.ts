@@ -1,62 +1,48 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '@/types/database';
-import { getSupabaseSiteUrl, debugUrlConfig } from '@/lib/utils/url';
 
-// 🚨 PRODUCTION FIX: Ensure environment variables are available
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://kvlaydeyqidlfpfutbmp.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt2bGF5ZGV5cWlkbGZwZnV0Ym1wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAyODgzNzAsImV4cCI6MjA2NTg2NDM3MH0.XVSO5W_0v6wW-MYlM7i0MTNKprOWp_O4ON-5LqqVnzw';
+// 🔧 STEP 1: VERIFY RUNTIME CONFIG
+const SUPA_URL = import.meta.env.VITE_SUPABASE_URL ?? 'https://kvlaydeyqidlfpfutbmp.supabase.co';
+const SUPA_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY ?? 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt2bGF5ZGV5cWlkbGZwZnV0Ym1wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAyODgzNzAsImV4cCI6MjA2NTg2NDM3MH0.XVSO5W_0v6wW-MYlM7i0MTNKprOWp_O4ON-5LqqVnzw';
 
-// 🔧 PRODUCTION DEBUG: Log environment variable status
-console.log('🔧 Supabase Environment Check:', {
-  hasUrl: !!supabaseUrl,
-  hasKey: !!supabaseAnonKey,
-  urlSource: import.meta.env.VITE_SUPABASE_URL ? 'env' : 'fallback',
-  keySource: import.meta.env.VITE_SUPABASE_ANON_KEY ? 'env' : 'fallback',
-  isDev: import.meta.env.DEV,
-  mode: import.meta.env.MODE
+// Log environment variables at app start
+console.log('🔧 SUPABASE CONFIG CHECK:', {
+  SUPA_URL: SUPA_URL,
+  SUPA_KEY_LENGTH: SUPA_KEY?.length,
+  HAS_URL: !!SUPA_URL,
+  HAS_KEY: !!SUPA_KEY,
+  ENV_MODE: import.meta.env.MODE
 });
 
-// Check if we're using placeholder values (development mode)
-const isPlaceholder = supabaseUrl?.includes('placeholder') ?? supabaseAnonKey?.includes('placeholder');
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  const error = new Error('Missing Supabase environment variables');
-  console.error('🚨 CRITICAL: Supabase configuration error:', error);
-  throw error;
+// Validate configuration
+if (!SUPA_URL || !SUPA_KEY) {
+  throw new Error('🚨 CRITICAL: Missing Supabase configuration');
 }
 
-if (isPlaceholder) {
-  console.warn('Using placeholder Supabase configuration. Some features may not work properly.');
-}
-
-// Debug URL configuration in development
-if (import.meta.env.DEV) {
-  debugUrlConfig();
-}
-
-// 🚨 PRODUCTION FIX: Create client with error handling
-let supabaseClient;
-try {
-  supabaseClient = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      autoRefreshToken: true,
-      persistSession: true,
-      detectSessionInUrl: true,
-      // Use dynamic site URL for redirects
-      redirectTo: getSupabaseSiteUrl()
-    },
-    realtime: {
-      // Completely disable realtime to prevent WebSocket errors
-      enabled: false
+// 🔧 STEP 2: UNIFY & HARDEN SUPABASE CLIENT
+export const supabase = createClient<Database>(SUPA_URL, SUPA_KEY, {
+  auth: {
+    persistSession: true,
+    detectSessionInUrl: true,
+    autoRefreshToken: true,
+    flowType: 'pkce'
+  },
+  realtime: {
+    enabled: false  // Disable to prevent WebSocket errors
+  },
+  global: {
+    headers: {
+      'X-Client-Info': 'lawmatterssg-webapp'
     }
-  });
-  console.log('✅ Supabase client created successfully');
-} catch (error) {
-  console.error('🚨 CRITICAL: Failed to create Supabase client:', error);
-  throw error;
-}
+  },
+  // 🔧 STEP 3: DISABLE TELEMETRY TO STOP 404s
+  db: {
+    schema: 'public'
+  }
+});
 
-export const supabase = supabaseClient;
+// Export same instance for consistency
+export const supabaseAuth = supabase;
 
 // Helper functions for common operations
 export const getCurrentUser = async () => {

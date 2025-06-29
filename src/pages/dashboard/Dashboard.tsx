@@ -12,13 +12,7 @@ const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const [profileRefreshed, setProfileRefreshed] = useState(false);
 
-  // Debug logging
-  console.log('🔍 Dashboard Debug - User:', user?.email);
-  console.log('🔍 Dashboard Debug - Profile:', profile);
-  console.log('🔍 Dashboard Debug - Profile Role:', profile?.role);
-  console.log('🔍 Dashboard Debug - Profile Subscription:', profile?.subscription_tier);
-  console.log('🔍 Dashboard Debug - Loading:', loading);
-  console.log('🔍 Dashboard Debug - Should show Super Admin:', profile?.role === 'super_admin');
+
 
   // Force refresh profile if role is missing or inconsistent
   useEffect(() => {
@@ -201,28 +195,11 @@ const Dashboard: React.FC = () => {
                   <p className="text-xs text-muted-foreground">
                     {profile?.role === 'super_admin' || profile?.role === 'admin' ? 'Administrative access' : 'Current plan'}
                   </p>
-                  {/* Debug info */}
-                  <div className="text-xs text-red-600 mt-2 p-2 bg-red-50 rounded">
-                    DEBUG: Role={profile?.role || 'null'} | Tier={profile?.subscription_tier || 'null'} | ID={profile?.id || 'null'}
-                  </div>
-                  {/* Debug info for role issues */}
-                  {process.env.NODE_ENV === 'development' && (
-                    <div className="mt-2 text-xs text-gray-400 border-t pt-2">
-                      Debug: Role={profile?.role}, Tier={profile?.subscription_tier}
-                    </div>
-                  )}
                 </CardContent>
               </Card>
             </div>
 
-            {/* Debug info for RAG Knowledge visibility */}
-            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
-              <p className="text-sm text-yellow-800">
-                <strong>DEBUG:</strong> Profile Role: {profile?.role || 'null'} |
-                Should show RAG Knowledge: {profile?.role === 'super_admin' ? 'YES' : 'NO'} |
-                Loading: {loading ? 'true' : 'false'}
-              </p>
-            </div>
+
 
             {/* Quick Actions */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

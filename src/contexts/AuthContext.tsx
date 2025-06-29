@@ -78,260 +78,198 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
 
-  // Add a safe profile setter that prevents overwriting valid profiles with null
-  const safeSetProfile = (newProfile: ProfileUser | null) => {
-    if (newProfile) {
-      // Always set if we have valid profile data
-      console.log('🔒 Setting profile:', newProfile.email, newProfile.role);
-      setProfile(newProfile);
-    } else {
-      // Only set to null if we don't currently have a profile
-      setProfile(current => {
-        if (current) {
-          console.log('🛡️ Preventing profile reset - keeping current profile:', current.email, current.role);
-          return current; // Keep existing profile
-        } else {
-          console.log('🔒 Setting profile to null (no existing profile)');
-          return null;
-        }
-      });
+  // 🔧 STEP 4: PROFILE CACHING & PERSISTENCE
+  const persistProfile = (profileData: ProfileUser | null) => {
+    try {
+      if (profileData) {
+        const cacheData = {
+          id: profileData.id,
+          email: profileData.email,
+          role: profileData.role,
+          subscription_tier: profileData.subscription_tier,
+          first_name: profileData.first_name,
+          last_name: profileData.last_name,
+          cached_at: Date.now()
+        };
+        sessionStorage.setItem('user-profile-cache', JSON.stringify(cacheData));
+      } else {
+        sessionStorage.removeItem('user-profile-cache');
+      }
+    } catch (error) {
+      console.warn('Profile cache error:', error);
     }
   };
 
-  // Add a timeout to prevent infinite loading - increased timeout for production
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      if (loading) {
-        console.warn('Auth initialization timeout - setting loading to false');
-        setLoading(false);
+  const loadCachedProfile = (): ProfileUser | null => {
+    try {
+      const cached = sessionStorage.getItem('user-profile-cache');
+      if (cached) {
+        const profileData = JSON.parse(cached);
+        const cacheAge = Date.now() - (profileData.cached_at || 0);
+        const maxAge = 10 * 60 * 1000; // 10 minutes
+
+        if (cacheAge < maxAge) {
+          return profileData as ProfileUser;
+        } else {
+          sessionStorage.removeItem('user-profile-cache');
+        }
       }
-    }, 15000); // 15 second timeout for production environment
+    } catch (error) {
+      console.warn('Cache load error:', error);
+      sessionStorage.removeItem('user-profile-cache');
+    }
+    return null;
+  };
 
-    return () => clearTimeout(timeout);
-  }, [loading]);
+  // 🔧 STEP 5: DEFENSIVE PROFILE SETTER
+  const safeSetProfile = (newProfile: ProfileUser | null) => {
+    if (newProfile) {
+      setProfile(newProfile);
+      persistProfile(newProfile);
+    } else {
+      // Only clear if we don't have a valid cached profile
+      const cached = loadCachedProfile();
+      if (cached) {
+        setProfile(cached);
+        persistProfile(cached);
+      } else {
+        setProfile(null);
+        persistProfile(null);
+      }
+    }
+  };
 
+  // 🔧 STEP 5: ROBUST SESSION INITIALIZATION
   useEffect(() => {
-    // Get initial session
-    const getInitialSession = async () => {
+    let mounted = true;
+    let timeoutId: NodeJS.Timeout;
+
+    const initializeAuth = async () => {
+      console.log('🔧 AUTH INIT: Starting authentication initialization...');
+
       try {
-        // Check if we have valid Supabase configuration
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-        const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-        if (!supabaseUrl || !supabaseKey || supabaseUrl.includes('placeholder') || supabaseKey.includes('placeholder')) {
-          console.warn('Supabase not configured properly, skipping auth initialization', {
-            hasUrl: !!supabaseUrl,
-            hasKey: !!supabaseKey,
-            urlPlaceholder: supabaseUrl?.includes('placeholder'),
-            keyPlaceholder: supabaseKey?.includes('placeholder')
-          });
-          setSession(null);
-          setUser(null);
-          setProfile(null);
-          setLoading(false);
-          return;
+        // Load cached profile immediately for UI (prevents role flicker)
+        const cachedProfile = loadCachedProfile();
+        if (cachedProfile && mounted) {
+          console.log('🔧 AUTH INIT: Using cached profile:', cachedProfile.role);
+          setProfile(cachedProfile);
         }
 
-        console.log('Initializing auth with Supabase:', {
-          url: supabaseUrl,
-          keyLength: supabaseKey?.length || 0
-        });
+        // Set timeout to prevent infinite loading
+        timeoutId = setTimeout(() => {
+          if (mounted) {
+            console.warn('🔧 AUTH INIT: Timeout reached, forcing loading to false');
+            setLoading(false);
+          }
+        }, 5000); // 5 second timeout
 
-        // Check if there's a flag to skip session restoration
-        const skipSessionRestore = localStorage.getItem('skipSessionRestore');
-
-        if (skipSessionRestore) {
-          console.log('Skipping session restoration as requested');
-          localStorage.removeItem('skipSessionRestore');
-          await supabase.auth.signOut();
-          setSession(null);
-          setUser(null);
-          setProfile(null);
-          setLoading(false);
-          return;
-        }
-
+        // Get current session with error handling
+        console.log('🔧 AUTH INIT: Getting current session...');
         const { data: { session }, error } = await supabase.auth.getSession();
 
-        console.log('Initial session check:', {
-          hasSession: !!session,
-          sessionExpiry: session?.expires_at,
-          currentTime: Math.floor(Date.now() / 1000),
-          userEmail: session?.user?.email,
-          error: error?.message
-        });
+        if (!mounted) return;
+
+        // Clear timeout since we got a response
+        clearTimeout(timeoutId);
 
         if (error) {
-          console.error('Error getting session:', error);
-          // Clear state and continue
+          console.error('🔧 AUTH INIT: Session error:', error);
           setSession(null);
           setUser(null);
-          setProfile(null);
+          safeSetProfile(null);
           setLoading(false);
           return;
         }
 
-        // For production, be more lenient with session validation to prevent immediate redirects
-        if (session) {
-          // Check if session is expired with buffer time
-          const currentTime = Math.floor(Date.now() / 1000);
-          const sessionExpiry = session.expires_at || 0;
-          const bufferTime = 300; // 5 minutes buffer
-
-          if (currentTime >= (sessionExpiry + bufferTime)) {
-            console.log('Session expired, clearing...');
-            await supabase.auth.signOut();
-            setSession(null);
-            setUser(null);
-            setProfile(null);
-          } else {
-            // For production, trust the session more and avoid unnecessary validation calls
-            // that might cause delays and premature redirects
-            console.log('Session found for user:', session.user?.email);
-            setSession(session);
-            setUser(session.user);
-
-            // Only validate if session is close to expiry
-            if (currentTime >= (sessionExpiry - 600)) { // 10 minutes before expiry
-              try {
-                const { data: { user }, error: userError } = await supabase.auth.getUser();
-                if (userError || !user) {
-                  console.log('Invalid session detected during validation, clearing...', userError?.message);
-                  await supabase.auth.signOut();
-                  setSession(null);
-                  setUser(null);
-                  setProfile(null);
-                }
-              } catch (validationError) {
-                console.error('Session validation failed:', validationError);
-                // Don't clear session on validation error, just log it
-                console.warn('Continuing with existing session despite validation error');
-              }
-            }
-          }
-        } else {
-          // No session found
-          console.log('No session found');
-          setSession(null);
-          setUser(null);
-          setProfile(null);
-        }
-
-        // Load profile if we have a valid user session
         if (session?.user) {
+          console.log('🔧 AUTH INIT: Valid session found for:', session.user.email);
+          setSession(session);
+          setUser(session.user);
+
+          // Fetch fresh profile data
           try {
-            console.log('🔄 Loading profile during initialization for user:', session.user.email);
-            const profileData = await profilesApi.getCurrentProfile();
-            if (profileData) {
-              console.log('✅ Profile loaded successfully during initialization:', {
-                email: profileData.email,
-                role: profileData.role,
-                subscription_tier: profileData.subscription_tier
-              });
+            const profileData = await profilesApi.getProfile(session.user.id);
+            if (mounted && profileData) {
+              console.log('🔧 AUTH INIT: Fresh profile loaded:', profileData.role);
               safeSetProfile(profileData);
-            } else {
-              console.warn('⚠️ Profile data is null during initialization');
-              safeSetProfile(null);
             }
           } catch (profileError) {
-            console.error('❌ Error loading profile during initialization:', profileError);
-            // Don't set profile to null immediately - keep trying
-            console.log('🔄 Will retry profile loading via loadProfile function...');
-            try {
-              await loadProfile();
-            } catch (retryError) {
-              console.error('❌ Retry also failed:', retryError);
-              safeSetProfile(null);
-            }
+            console.warn('🔧 AUTH INIT: Profile fetch error, keeping cached:', profileError);
+            // Keep cached profile if fetch fails
           }
         } else {
-          // Explicitly set profile to null when no user
-          console.log('ℹ️ No user session, setting profile to null');
+          console.log('🔧 AUTH INIT: No valid session found');
+          setSession(null);
+          setUser(null);
           safeSetProfile(null);
         }
       } catch (error) {
-        console.error('Failed to initialize auth session:', error);
-        // Ensure clean state on error
-        setSession(null);
-        setUser(null);
-        safeSetProfile(null);
+        console.error('🔧 AUTH INIT: Critical error:', error);
+        if (mounted) {
+          setSession(null);
+          setUser(null);
+          safeSetProfile(null);
+        }
       } finally {
-        // Always set loading to false, regardless of success or failure
-        setLoading(false);
+        if (mounted) {
+          console.log('🔧 AUTH INIT: Initialization complete, setting loading to false');
+          setLoading(false);
+        }
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
       }
     };
 
-    getInitialSession();
+    initializeAuth();
 
-    // Listen for auth changes
-    let subscription: any = null;
-    try {
-      // Only set up listener if Supabase is properly configured
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-      if (supabaseUrl && supabaseKey && !supabaseUrl.includes('placeholder') && !supabaseKey.includes('placeholder')) {
-        const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(
-          async (event, session) => {
-            console.log('🔄 Auth state change:', event, session?.user?.email || 'no user');
-
-            setSession(session);
-            setUser(session?.user ?? null);
-
-            // Handle profile loading based on event type to prevent unnecessary resets
-            if (event === 'SIGNED_IN' && session?.user) {
-              try {
-                console.log('🔄 Loading profile after sign in for user:', session.user.email);
-                const profileData = await profilesApi.getCurrentProfile();
-                if (profileData) {
-                  console.log('✅ Profile loaded after sign in:', {
-                    email: profileData.email,
-                    role: profileData.role,
-                    subscription_tier: profileData.subscription_tier
-                  });
-                  safeSetProfile(profileData);
-                } else {
-                  console.warn('⚠️ Profile data is null after sign in');
-                  safeSetProfile(null);
-                }
-              } catch (profileError) {
-                console.error('❌ Error loading profile during sign in:', profileError);
-                // Don't immediately set to null, try the loadProfile function
-                try {
-                  await loadProfile();
-                } catch (retryError) {
-                  console.error('❌ Profile loading retry failed:', retryError);
-                  safeSetProfile(null);
-                }
-              }
-            } else if (event === 'SIGNED_OUT') {
-              // Clear profile when user logs out
-              console.log('ℹ️ User signed out, clearing profile');
-              setProfile(null); // Use regular setProfile for sign out to ensure clean state
-            } else if (event === 'TOKEN_REFRESHED' && session?.user && !profile) {
-              // Only reload profile if we don't have one and token was refreshed
-              try {
-                console.log('🔄 Token refreshed, loading profile if missing for user:', session.user.email);
-                const profileData = await profilesApi.getCurrentProfile();
-                if (profileData) {
-                  safeSetProfile(profileData);
-                }
-              } catch (profileError) {
-                console.error('❌ Error loading profile during token refresh:', profileError);
-              }
-            }
-            // For other events, don't touch the profile to prevent resets
-
-            setLoading(false);
-          }
-        );
-        subscription = authSubscription;
-      } else {
-        console.warn('Skipping auth state listener setup - Supabase not configured');
+    return () => {
+      mounted = false;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
       }
+    };
+  }, []); // Only run once on mount
+
+  // 🔧 STEP 6: ROBUST AUTH STATE LISTENER
+  useEffect(() => {
+    let subscription: any = null;
+
+    try {
+      const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(
+        async (event, session) => {
+          console.log('🔧 AUTH LISTENER: State change -', event, session?.user?.email || 'no user');
+
+          // Always update session and user state
+          setSession(session);
+          setUser(session?.user ?? null);
+
+          if (event === 'SIGNED_IN' && session?.user) {
+            console.log('🔧 AUTH LISTENER: User signed in, loading profile...');
+            try {
+              const profileData = await profilesApi.getCurrentProfile();
+              if (profileData) {
+                console.log('🔧 AUTH LISTENER: Profile loaded on sign in:', profileData.role);
+                safeSetProfile(profileData);
+              }
+            } catch (profileError) {
+              console.warn('🔧 AUTH LISTENER: Profile load error on sign in:', profileError);
+              // Keep any cached profile
+            }
+          } else if (event === 'SIGNED_OUT') {
+            console.log('🔧 AUTH LISTENER: User signed out, clearing profile');
+            setProfile(null);
+            persistProfile(null);
+          }
+
+          // Only set loading to false if we're not in the initial loading state
+          // This prevents the auth listener from interfering with the initial load
+          setLoading(false);
+        }
+      );
+      subscription = authSubscription;
     } catch (error) {
-      console.error('Failed to set up auth state listener:', error);
-      // Ensure loading is set to false even if listener setup fails
+      console.error('🔧 AUTH LISTENER: Setup error:', error);
       setLoading(false);
     }
 
@@ -449,22 +387,32 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // STEP 1: Set loading state to prevent multiple clicks
       setLoading(true);
 
-      // STEP 2: Try graceful Supabase sign out first (with timeout)
-      console.log('🔄 Attempting graceful Supabase sign out...');
+      // STEP 2: Try graceful Supabase sign out first (with session check)
+      console.log('🔄 Checking for active session before sign out...');
 
-      const signOutPromise = supabase.auth.signOut();
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Sign out timeout')), 3000)
-      );
+      const currentSession = await supabase.auth.getSession();
 
-      try {
-        await Promise.race([signOutPromise, timeoutPromise]);
-        console.log('✅ Supabase sign out successful');
+      if (currentSession.data.session) {
+        console.log('🔄 Active session found, attempting graceful Supabase sign out...');
+
+        const signOutPromise = supabase.auth.signOut();
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Sign out timeout')), 3000)
+        );
+
+        try {
+          await Promise.race([signOutPromise, timeoutPromise]);
+          console.log('✅ Supabase sign out successful');
+          signOutAttempt.success = true;
+        } catch (supabaseError: any) {
+          console.warn('⚠️ Supabase sign out failed or timed out:', supabaseError);
+          signOutAttempt.errors.push(`Supabase: ${supabaseError.message}`);
+          signOutAttempt.method = 'fallback';
+        }
+      } else {
+        console.log('ℹ️ No active session found, skipping Supabase sign out');
         signOutAttempt.success = true;
-      } catch (supabaseError: any) {
-        console.warn('⚠️ Supabase sign out failed or timed out:', supabaseError);
-        signOutAttempt.errors.push(`Supabase: ${supabaseError.message}`);
-        signOutAttempt.method = 'fallback';
+        signOutAttempt.method = 'no_session';
       }
 
       // STEP 3: Clear React state (always do this)
@@ -522,6 +470,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setSession(null);
       setUser(null);
       setProfile(null);
+      persistProfile(null);
       setRequiresTwoFactor(false);
       setLoading(false);
 

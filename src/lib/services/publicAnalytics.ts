@@ -57,9 +57,16 @@ class PublicAnalyticsService {
 
   /**
    * Track an analytics event
+   * 🔧 STEP 4: DISABLE ANALYTICS TO FIX 404 ERRORS
    */
   async trackEvent(eventType: string, eventData: Record<string, any> = {}): Promise<void> {
     try {
+      // Temporarily disable analytics to prevent 404 errors
+      console.log('📊 Analytics disabled - would track:', eventType, eventData);
+      return;
+
+      // TODO: Re-enable once public_analytics_events table is properly set up
+      /*
       if (!this.sessionId) {
         await this.initializeSession();
       }
@@ -89,6 +96,7 @@ class PublicAnalyticsService {
 
       // Also send to external analytics if configured
       await this.sendToExternalAnalytics(event);
+      */
 
     } catch (error) {
       console.error('Failed to track event:', error);

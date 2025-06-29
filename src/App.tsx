@@ -77,6 +77,37 @@ const App = () => {
   console.log('🔧 VITE_SUPABASE_URL:', import.meta.env.VITE_SUPABASE_URL);
   console.log('🔧 VITE_SUPABASE_ANON_KEY exists:', !!import.meta.env.VITE_SUPABASE_ANON_KEY);
 
+  // Global error handlers to prevent app crashes
+  useEffect(() => {
+    // Handle unhandled promise rejections
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      console.error('🚨 Unhandled Promise Rejection:', event.reason);
+      event.preventDefault(); // Prevent default browser behavior
+    };
+
+    // Handle JavaScript errors
+    const handleError = (event: ErrorEvent) => {
+      console.error('🚨 JavaScript Error:', {
+        message: event.message,
+        filename: event.filename,
+        lineno: event.lineno,
+        colno: event.colno,
+        error: event.error
+      });
+      event.preventDefault(); // Prevent default browser behavior
+    };
+
+    // Add global error listeners
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+    window.addEventListener('error', handleError);
+
+    // Cleanup
+    return () => {
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+      window.removeEventListener('error', handleError);
+    };
+  }, []);
+
   // Debug Supabase connection immediately when app loads
   useEffect(() => {
     console.log('🚀 APP DEBUG - useEffect running...');
