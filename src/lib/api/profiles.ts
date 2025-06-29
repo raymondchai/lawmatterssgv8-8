@@ -6,18 +6,19 @@ export const profilesApi = {
   async getCurrentProfile() {
     console.log('🔍 getCurrentProfile - Starting profile fetch...');
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError) {
-      console.error('❌ getCurrentProfile - Auth error:', userError);
-      throw userError;
-    }
-    if (!user) {
-      console.error('❌ getCurrentProfile - No user authenticated');
-      throw new Error('User not authenticated');
-    }
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError) {
+        console.error('❌ getCurrentProfile - Auth error:', userError);
+        throw userError;
+      }
+      if (!user) {
+        console.error('❌ getCurrentProfile - No user authenticated');
+        throw new Error('User not authenticated');
+      }
 
-    console.log('✅ getCurrentProfile - Auth User ID:', user.id);
-    console.log('✅ getCurrentProfile - Auth User Email:', user.email);
+      console.log('✅ getCurrentProfile - Auth User ID:', user.id);
+      console.log('✅ getCurrentProfile - Auth User Email:', user.email);
 
     // Test Supabase connection first
     console.log('🔗 Testing Supabase connection...');
@@ -65,7 +66,27 @@ export const profilesApi = {
 
       throw error;
     }
+
+    // Add final validation and debugging
+    if (!data) {
+      console.error('❌ getCurrentProfile - Profile data is null despite no error');
+      throw new Error('Profile data is null');
+    }
+
+    console.log('✅ getCurrentProfile - Profile fetched successfully:', {
+      email: data.email,
+      role: data.role,
+      subscription_tier: data.subscription_tier,
+      id: data.id,
+      roleType: typeof data.role,
+      isSuperAdmin: data.role === 'super_admin'
+    });
+
     return data as User;
+    } catch (error) {
+      console.error('❌ getCurrentProfile - Unexpected error:', error);
+      throw error;
+    }
   },
 
   // Update user profile

@@ -13,31 +13,75 @@ const Dashboard: React.FC = () => {
   const [profileRefreshed, setProfileRefreshed] = useState(false);
 
   // Debug logging
-  console.log('Dashboard - User:', user?.email);
-  console.log('Dashboard - Profile:', profile);
-  console.log('Dashboard - Profile Role:', profile?.role);
-  console.log('Dashboard - Profile Subscription:', profile?.subscription_tier);
-  console.log('Dashboard - Loading:', loading);
+  console.log('🔍 Dashboard Debug - User:', user?.email);
+  console.log('🔍 Dashboard Debug - Profile:', profile);
+  console.log('🔍 Dashboard Debug - Profile Role:', profile?.role);
+  console.log('🔍 Dashboard Debug - Profile Subscription:', profile?.subscription_tier);
+  console.log('🔍 Dashboard Debug - Loading:', loading);
+  console.log('🔍 Dashboard Debug - Should show Super Admin:', profile?.role === 'super_admin');
 
   // Force refresh profile if role is missing or inconsistent
   useEffect(() => {
     const refreshProfileIfNeeded = async () => {
-      if (user && !profileRefreshed && (!profile?.role || profile.role === 'user')) {
+      // Only refresh if we have a user but no profile, or profile has default 'user' role
+      // Don't refresh if profile is already loaded with a proper role
+      if (user && !profileRefreshed && (!profile || !profile.role || profile.role === 'user')) {
         console.log('Dashboard: Force refreshing profile due to missing/incorrect role data');
+        console.log('Dashboard: Current profile state:', profile);
         try {
-          await forceRefreshProfile();
+          const refreshedProfile = await forceRefreshProfile();
+          console.log('Dashboard: Profile refreshed successfully:', refreshedProfile);
           setProfileRefreshed(true);
         } catch (error) {
           console.error('Dashboard: Error force refreshing profile:', error);
         }
+      } else if (profile?.role && profile.role !== 'user') {
+        console.log('Dashboard: Profile already has proper role:', profile.role);
+        setProfileRefreshed(true);
       }
     };
 
-    // Only run after initial loading is complete
-    if (!loading) {
+    // Only run after initial loading is complete and we have a user
+    if (!loading && user) {
       refreshProfileIfNeeded();
     }
   }, [user, profile, forceRefreshProfile, profileRefreshed, loading]);
+
+  // Debug Supabase connection and environment variables
+  useEffect(() => {
+    const debugSupabase = async () => {
+      console.log('🔧 SUPABASE DEBUG - Environment Variables:');
+      console.log('VITE_SUPABASE_URL:', import.meta.env.VITE_SUPABASE_URL);
+      console.log('VITE_SUPABASE_ANON_KEY exists:', !!import.meta.env.VITE_SUPABASE_ANON_KEY);
+      console.log('VITE_SUPABASE_ANON_KEY length:', import.meta.env.VITE_SUPABASE_ANON_KEY?.length);
+
+      try {
+        // Test auth state
+        const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+        console.log('🔧 SUPABASE DEBUG - Auth User:', authUser ? { id: authUser.id, email: authUser.email } : null);
+        console.log('🔧 SUPABASE DEBUG - Auth Error:', authError);
+
+        // Test direct profile query
+        if (authUser) {
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', authUser.id)
+            .single();
+
+          console.log('🔧 SUPABASE DEBUG - Profile Query Result:', profileData);
+          console.log('🔧 SUPABASE DEBUG - Profile Query Error:', profileError);
+        }
+      } catch (error) {
+        console.error('🔧 SUPABASE DEBUG - Connection Error:', error);
+      }
+    };
+
+    // Run debug only once when component mounts
+    if (!loading) {
+      debugSupabase();
+    }
+  }, [loading]);
 
   const handleSignOut = async () => {
     try {
@@ -157,6 +201,10 @@ const Dashboard: React.FC = () => {
                   <p className="text-xs text-muted-foreground">
                     {profile?.role === 'super_admin' || profile?.role === 'admin' ? 'Administrative access' : 'Current plan'}
                   </p>
+                  {/* Debug info */}
+                  <div className="text-xs text-red-600 mt-2 p-2 bg-red-50 rounded">
+                    DEBUG: Role={profile?.role || 'null'} | Tier={profile?.subscription_tier || 'null'} | ID={profile?.id || 'null'}
+                  </div>
                   {/* Debug info for role issues */}
                   {process.env.NODE_ENV === 'development' && (
                     <div className="mt-2 text-xs text-gray-400 border-t pt-2">
@@ -165,6 +213,15 @@ const Dashboard: React.FC = () => {
                   )}
                 </CardContent>
               </Card>
+            </div>
+
+            {/* Debug info for RAG Knowledge visibility */}
+            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
+              <p className="text-sm text-yellow-800">
+                <strong>DEBUG:</strong> Profile Role: {profile?.role || 'null'} |
+                Should show RAG Knowledge: {profile?.role === 'super_admin' ? 'YES' : 'NO'} |
+                Loading: {loading ? 'true' : 'false'}
+              </p>
             </div>
 
             {/* Quick Actions */}

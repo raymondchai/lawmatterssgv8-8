@@ -1,10 +1,11 @@
-import React, { Suspense, lazy } from "react";
+import React, { Suspense, lazy, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+
 import Index from "./pages/Index";
 import Pricing from "./pages/Pricing";
 import LawFirms from "./pages/LawFirms";
@@ -70,6 +71,69 @@ const LazyAdmin = lazy(() => import("./pages/dashboard/Admin"));
 const queryClient = new QueryClient();
 
 const App = () => {
+  // IMMEDIATE DEBUG - This should run first
+  console.log('🚀🚀🚀 APP COMPONENT MOUNTING - DEBUG START 🚀🚀🚀');
+  console.log('🔧 Environment Check:');
+  console.log('🔧 VITE_SUPABASE_URL:', import.meta.env.VITE_SUPABASE_URL);
+  console.log('🔧 VITE_SUPABASE_ANON_KEY exists:', !!import.meta.env.VITE_SUPABASE_ANON_KEY);
+
+  // Debug Supabase connection immediately when app loads
+  useEffect(() => {
+    console.log('🚀 APP DEBUG - useEffect running...');
+    const debugSupabaseConnection = async () => {
+      console.log('🚀 APP DEBUG - Starting Supabase connection test...');
+      console.log('🔧 Environment Variables:');
+      console.log('VITE_SUPABASE_URL:', import.meta.env.VITE_SUPABASE_URL);
+      console.log('VITE_SUPABASE_ANON_KEY exists:', !!import.meta.env.VITE_SUPABASE_ANON_KEY);
+      console.log('VITE_SUPABASE_ANON_KEY length:', import.meta.env.VITE_SUPABASE_ANON_KEY?.length);
+
+      try {
+        // Import and test Supabase client
+        console.log('🔧 Step 1: Importing Supabase...');
+        const { supabase } = await import('@/lib/supabase');
+        console.log('✅ Step 1 PASSED: Supabase imported successfully');
+
+        // Test basic connection
+        console.log('🔧 Step 2: Testing auth connection...');
+        const { data: { user }, error } = await supabase.auth.getUser();
+        console.log('🔧 Auth User:', user ? { id: user.id, email: user.email } : null);
+        console.log('🔧 Auth Error:', error);
+
+        if (error) {
+          console.error('❌ Step 2 FAILED: Auth connection error:', error);
+        } else {
+          console.log('✅ Step 2 PASSED: Auth connection working');
+        }
+
+        // Test profile query if user exists
+        if (user) {
+          console.log('🔧 Step 3: Testing database query...');
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+
+          console.log('🔧 Profile Data:', profile);
+          console.log('🔧 Profile Error:', profileError);
+
+          if (profileError) {
+            console.error('❌ Step 3 FAILED: Database query error:', profileError);
+          } else {
+            console.log('✅ Step 3 PASSED: Database query working');
+          }
+        }
+      } catch (error) {
+        console.error('❌ CRITICAL ERROR in connection test:', error);
+        console.error('❌ Error type:', typeof error);
+        console.error('❌ Error message:', error instanceof Error ? error.message : 'Unknown error');
+        console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+      }
+    };
+
+    debugSupabaseConnection();
+  }, []);
+
   return (
     <ErrorBoundary level="page">
       <QueryClientProvider client={queryClient}>

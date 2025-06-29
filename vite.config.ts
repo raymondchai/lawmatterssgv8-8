@@ -153,6 +153,6 @@ export default defineConfig(({ mode }) => ({
   // Handle Node.js polyfills and globals
   define: {
     global: 'globalThis',
-    'process.env': {},
+    // Don't override process.env - let Vite handle environment variables
   },
 }));

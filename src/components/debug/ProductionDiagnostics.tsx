@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, XCircle, AlertTriangle, RefreshCw, Globe, Database, Key, Upload } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 interface DiagnosticResult {
   category: string;
@@ -53,11 +54,10 @@ const ProductionDiagnostics: React.FC = () => {
       fix: currentUrl !== configuredUrl ? 'Update VITE_APP_URL environment variable to match production URL' : undefined
     });
 
-    // 3. Supabase Connection
+    // 3. Supabase Connection - FIXED: Use direct import instead of dynamic import
     try {
-      const { supabase } = await import('@/lib/supabase');
       const { data, error } = await supabase.from('profiles').select('count').limit(1);
-      
+
       diagnostics.push({
         category: 'Database',
         name: 'Supabase Connection',
@@ -71,17 +71,16 @@ const ProductionDiagnostics: React.FC = () => {
         category: 'Database',
         name: 'Supabase Connection',
         status: 'error',
-        message: `Import failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        message: `Connection failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
         details: error,
         fix: 'Check if Supabase is properly configured and imported'
       });
     }
 
-    // 4. Authentication Status
+    // 4. Authentication Status - FIXED: Use direct import
     try {
-      const { supabase } = await import('@/lib/supabase');
       const { data: { user }, error } = await supabase.auth.getUser();
-      
+
       diagnostics.push({
         category: 'Authentication',
         name: 'User Session',
@@ -123,12 +122,11 @@ const ProductionDiagnostics: React.FC = () => {
       });
     }
 
-    // 6. Storage Bucket Test
+    // 6. Storage Bucket Test - FIXED: Use direct import
     try {
-      const { supabase } = await import('@/lib/supabase');
       const { data, error } = await supabase.storage.listBuckets();
       const documentsBucket = data?.find(bucket => bucket.name === 'documents');
-      
+
       diagnostics.push({
         category: 'Storage',
         name: 'Documents Bucket',

@@ -78,6 +78,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
 
+  // Add a safe profile setter that prevents overwriting valid profiles with null
+  const safeSetProfile = (newProfile: ProfileUser | null) => {
+    if (newProfile) {
+      // Always set if we have valid profile data
+      console.log('🔒 Setting profile:', newProfile.email, newProfile.role);
+      setProfile(newProfile);
+    } else {
+      // Only set to null if we don't currently have a profile
+      setProfile(current => {
+        if (current) {
+          console.log('🛡️ Preventing profile reset - keeping current profile:', current.email, current.role);
+          return current; // Keep existing profile
+        } else {
+          console.log('🔒 Setting profile to null (no existing profile)');
+          return null;
+        }
+      });
+    }
+  };
+
   // Add a timeout to prevent infinite loading - increased timeout for production
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -201,24 +221,40 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (session?.user) {
           try {
             console.log('🔄 Loading profile during initialization for user:', session.user.email);
-            await loadProfile();
-            console.log('✅ Profile loaded successfully during initialization');
+            const profileData = await profilesApi.getCurrentProfile();
+            if (profileData) {
+              console.log('✅ Profile loaded successfully during initialization:', {
+                email: profileData.email,
+                role: profileData.role,
+                subscription_tier: profileData.subscription_tier
+              });
+              safeSetProfile(profileData);
+            } else {
+              console.warn('⚠️ Profile data is null during initialization');
+              safeSetProfile(null);
+            }
           } catch (profileError) {
             console.error('❌ Error loading profile during initialization:', profileError);
-            // Set profile to null on error but don't throw
-            setProfile(null);
+            // Don't set profile to null immediately - keep trying
+            console.log('🔄 Will retry profile loading via loadProfile function...');
+            try {
+              await loadProfile();
+            } catch (retryError) {
+              console.error('❌ Retry also failed:', retryError);
+              safeSetProfile(null);
+            }
           }
         } else {
           // Explicitly set profile to null when no user
           console.log('ℹ️ No user session, setting profile to null');
-          setProfile(null);
+          safeSetProfile(null);
         }
       } catch (error) {
         console.error('Failed to initialize auth session:', error);
         // Ensure clean state on error
         setSession(null);
         setUser(null);
-        setProfile(null);
+        safeSetProfile(null);
       } finally {
         // Always set loading to false, regardless of success or failure
         setLoading(false);
@@ -242,20 +278,49 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             setSession(session);
             setUser(session?.user ?? null);
 
-            if (session?.user) {
+            // Handle profile loading based on event type to prevent unnecessary resets
+            if (event === 'SIGNED_IN' && session?.user) {
               try {
-                console.log('🔄 Loading profile after auth state change for user:', session.user.email);
-                await loadProfile();
-                console.log('✅ Profile loaded after auth state change');
+                console.log('🔄 Loading profile after sign in for user:', session.user.email);
+                const profileData = await profilesApi.getCurrentProfile();
+                if (profileData) {
+                  console.log('✅ Profile loaded after sign in:', {
+                    email: profileData.email,
+                    role: profileData.role,
+                    subscription_tier: profileData.subscription_tier
+                  });
+                  safeSetProfile(profileData);
+                } else {
+                  console.warn('⚠️ Profile data is null after sign in');
+                  safeSetProfile(null);
+                }
               } catch (profileError) {
-                console.error('❌ Error loading profile during auth change:', profileError);
-                // Set profile to null on error
-                setProfile(null);
+                console.error('❌ Error loading profile during sign in:', profileError);
+                // Don't immediately set to null, try the loadProfile function
+                try {
+                  await loadProfile();
+                } catch (retryError) {
+                  console.error('❌ Profile loading retry failed:', retryError);
+                  safeSetProfile(null);
+                }
               }
-            } else {
-              console.log('ℹ️ No user in auth state change, clearing profile');
-              setProfile(null);
+            } else if (event === 'SIGNED_OUT') {
+              // Clear profile when user logs out
+              console.log('ℹ️ User signed out, clearing profile');
+              setProfile(null); // Use regular setProfile for sign out to ensure clean state
+            } else if (event === 'TOKEN_REFRESHED' && session?.user && !profile) {
+              // Only reload profile if we don't have one and token was refreshed
+              try {
+                console.log('🔄 Token refreshed, loading profile if missing for user:', session.user.email);
+                const profileData = await profilesApi.getCurrentProfile();
+                if (profileData) {
+                  safeSetProfile(profileData);
+                }
+              } catch (profileError) {
+                console.error('❌ Error loading profile during token refresh:', profileError);
+              }
             }
+            // For other events, don't touch the profile to prevent resets
 
             setLoading(false);
           }
@@ -280,6 +345,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const loadProfile = async (retryCount = 0) => {
     try {
       console.log('🔄 AuthContext - Loading user profile from database...', retryCount > 0 ? `(retry ${retryCount})` : '');
+
+      // Add additional debugging for profile loading
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      console.log('🔍 AuthContext - Current auth user:', currentUser?.email, currentUser?.id);
+
       const profileData = await profilesApi.getCurrentProfile();
 
       // Ensure we have the correct role data
@@ -288,15 +358,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           email: profileData.email,
           role: profileData.role,
           subscription_tier: profileData.subscription_tier,
-          id: profileData.id
+          id: profileData.id,
+          roleType: typeof profileData.role,
+          isSuperAdmin: profileData.role === 'super_admin'
         });
-        setProfile(profileData);
+        safeSetProfile(profileData);
       } else {
         console.warn('⚠️ AuthContext - Profile data is null or undefined');
-        setProfile(null);
+        safeSetProfile(null);
       }
     } catch (error) {
       console.error('❌ AuthContext - Error loading profile:', error);
+      console.error('❌ AuthContext - Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      });
 
       // Retry up to 2 times with exponential backoff
       if (retryCount < 2) {
@@ -305,7 +381,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setTimeout(() => loadProfile(retryCount + 1), delay);
       } else {
         console.error('Failed to load profile after retries, setting to null');
-        setProfile(null);
+        safeSetProfile(null);
       }
     }
   };
@@ -550,8 +626,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     console.log('Force refreshing user profile from database...');
     try {
       const profileData = await profilesApi.getCurrentProfile();
-      setProfile(profileData);
-      console.log('Profile force refreshed successfully:', profileData?.email, 'Tier:', profileData?.subscription_tier);
+      safeSetProfile(profileData);
+      console.log('Profile force refreshed successfully:', profileData?.email, 'Role:', profileData?.role, 'Tier:', profileData?.subscription_tier);
       return profileData;
     } catch (error) {
       console.error('Error force refreshing profile:', error);
