@@ -36,6 +36,8 @@ import SearchHistory from "./pages/dashboard/SearchHistory";
 import NotFound from "./pages/NotFound";
 import DebugAuth from "./pages/DebugAuth";
 import AuthTest from "./pages/AuthTest";
+import SimpleAuthTest from "./pages/SimpleAuthTest";
+import BasicTest from "./pages/BasicTest";
 import ClearAuth from "./pages/ClearAuth";
 import LogoutTest from "./pages/LogoutTest";
 import EmergencyLogout from "./pages/EmergencyLogout";
@@ -92,6 +94,8 @@ const App = () => {
               <Route path="/debug/upload" element={<DebugUpload />} />
               <Route path="/debug-auth" element={<DebugAuth />} />
               <Route path="/auth-test" element={<AuthTest />} />
+              <Route path="/simple-auth-test" element={<SimpleAuthTest />} />
+              <Route path="/basic-test" element={<BasicTest />} />
               <Route path="/clear-auth" element={<ClearAuth />} />
               <Route path="/logout-test" element={<LogoutTest />} />
               <Route path="/emergency-logout" element={<EmergencyLogout />} />
