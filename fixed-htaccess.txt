@@ -1,0 +1,80 @@
+# LawMattersSG Production .htaccess
+# Fixed version to resolve CORS and loading issues
+
+# Enable rewrite engine
+RewriteEngine On
+
+# Security headers
+Header always set X-Frame-Options "SAMEORIGIN"
+Header always set X-Content-Type-Options "nosniff"
+Header always set X-XSS-Protection "1; mode=block"
+Header always set Referrer-Policy "strict-origin-when-cross-origin"
+
+# CORS headers for assets
+<FilesMatch "\.(js|css|woff|woff2|ttf|eot|svg|png|jpg|jpeg|gif|ico)$">
+    Header set Access-Control-Allow-Origin "*"
+    Header set Access-Control-Allow-Methods "GET, POST, OPTIONS"
+    Header set Access-Control-Allow-Headers "Content-Type, Authorization"
+</FilesMatch>
+
+# Proper MIME types
+AddType application/javascript .js
+AddType application/javascript .mjs
+AddType text/css .css
+AddType text/html .html
+AddType application/json .json
+AddType font/woff .woff
+AddType font/woff2 .woff2
+AddType application/font-woff .woff
+AddType application/font-woff2 .woff2
+
+# Cache control for assets
+<FilesMatch "\.(js|css|woff|woff2|ttf|eot|svg|png|jpg|jpeg|gif|ico)$">
+    ExpiresActive On
+    ExpiresDefault "access plus 1 month"
+    Header set Cache-Control "public, max-age=2592000"
+</FilesMatch>
+
+# No cache for HTML files
+<FilesMatch "\.(html|htm)$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+</FilesMatch>
+
+# Enable compression
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/plain
+    AddOutputFilterByType DEFLATE text/html
+    AddOutputFilterByType DEFLATE text/xml
+    AddOutputFilterByType DEFLATE text/css
+    AddOutputFilterByType DEFLATE application/xml
+    AddOutputFilterByType DEFLATE application/xhtml+xml
+    AddOutputFilterByType DEFLATE application/rss+xml
+    AddOutputFilterByType DEFLATE application/javascript
+    AddOutputFilterByType DEFLATE application/x-javascript
+    AddOutputFilterByType DEFLATE application/json
+</IfModule>
+
+# React Router - Handle client-side routing
+# IMPORTANT: This must come AFTER the asset rules
+
+# Skip rewrite for existing files
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Skip rewrite for assets directory
+RewriteCond %{REQUEST_URI} !^/assets/
+
+# Skip rewrite for common file extensions
+RewriteCond %{REQUEST_URI} !\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|json|xml|txt)$
+
+# Skip rewrite for API calls (if any)
+RewriteCond %{REQUEST_URI} !^/api/
+
+# Redirect all other requests to index.html
+RewriteRule ^.*$ /index.html [L]
+
+# Error pages
+ErrorDocument 404 /index.html
+ErrorDocument 403 /index.html

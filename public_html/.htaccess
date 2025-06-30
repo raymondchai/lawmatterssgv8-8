@@ -1,27 +1,28 @@
-# LawMattersSG on craftchatbot.com
-# SPA routing and security configuration
+# LawMattersSG Cache Busting and Routing Configuration
+# Generated: 2025-06-30T13:45:09.709Z
 
-# Enable HTTPS redirect
-RewriteEngine On
-RewriteCond %{HTTPS} off
-RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+# Disable server-side caching for HTML files
+<FilesMatch "\.(html|htm)$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+</FilesMatch>
 
-# Handle React Router (SPA)
-RewriteEngine On
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule . /index.html [L]
+# Force cache refresh for JavaScript and CSS files
+<FilesMatch "\.(js|css)$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+    Header set Last-Modified "Thu, 01 Jan 1970 00:00:00 GMT"
+    Header set ETag ""
+</FilesMatch>
 
-# Security Headers
-<IfModule mod_headers.c>
-    Header always set X-Content-Type-Options nosniff
-    Header always set X-Frame-Options DENY
-    Header always set X-XSS-Protection "1; mode=block"
-    Header always set Referrer-Policy "strict-origin-when-cross-origin"
-    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
-</IfModule>
+# Ensure proper MIME types
+AddType application/javascript .js
+AddType text/css .css
+AddType text/html .html
 
-# Compression
+# Enable compression
 <IfModule mod_deflate.c>
     AddOutputFilterByType DEFLATE text/plain
     AddOutputFilterByType DEFLATE text/html
@@ -32,31 +33,33 @@ RewriteRule . /index.html [L]
     AddOutputFilterByType DEFLATE application/rss+xml
     AddOutputFilterByType DEFLATE application/javascript
     AddOutputFilterByType DEFLATE application/x-javascript
-    AddOutputFilterByType DEFLATE application/json
 </IfModule>
 
-# Cache Control
-<IfModule mod_expires.c>
-    ExpiresActive On
-    ExpiresByType text/css "access plus 1 year"
-    ExpiresByType application/javascript "access plus 1 year"
-    ExpiresByType image/png "access plus 1 year"
-    ExpiresByType image/jpg "access plus 1 year"
-    ExpiresByType image/jpeg "access plus 1 year"
-    ExpiresByType image/gif "access plus 1 year"
-    ExpiresByType image/svg+xml "access plus 1 year"
-    ExpiresByType image/webp "access plus 1 year"
-    ExpiresByType font/woff "access plus 1 year"
-    ExpiresByType font/woff2 "access plus 1 year"
-</IfModule>
+# React Router - Handle client-side routing
+RewriteEngine On
 
-# Prevent access to sensitive files
-<Files ".env*">
-    Order allow,deny
-    Deny from all
-</Files>
+# Skip rewrite for existing files and directories
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
 
-<Files "*.config.*">
-    Order allow,deny
-    Deny from all
-</Files>
+# Skip rewrite for API calls
+RewriteCond %{REQUEST_URI} !^/api/
+
+# Skip rewrite for assets
+RewriteCond %{REQUEST_URI} !^/assets/
+
+# Skip rewrite for common file extensions
+RewriteCond %{REQUEST_URI} !\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$
+
+# Redirect all other requests to index.html
+RewriteRule ^.*$ /index.html [L]
+
+# Security headers
+Header always set X-Frame-Options "SAMEORIGIN"
+Header always set X-Content-Type-Options "nosniff"
+Header always set X-XSS-Protection "1; mode=block"
+Header always set Referrer-Policy "strict-origin-when-cross-origin"
+
+# Force HTTPS (uncomment if needed)
+# RewriteCond %{HTTPS} off
+# RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]

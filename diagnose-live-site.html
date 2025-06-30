@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Site Diagnostics</title>
+    <style>
+        body { font-family: monospace; margin: 20px; background: #1a1a1a; color: #00ff00; }
+        .error { color: #ff4444; }
+        .success { color: #44ff44; }
+        .warning { color: #ffaa44; }
+        .info { color: #4444ff; }
+        pre { background: #2a2a2a; padding: 10px; border-radius: 4px; overflow-x: auto; }
+        button { background: #333; color: #fff; border: 1px solid #555; padding: 10px; margin: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Live Site Diagnostics for craftchatbot.com</h1>
+    <div id="results"></div>
+    <button onclick="runDiagnostics()">Run Full Diagnostics</button>
+    <button onclick="testAssetUrls()">Test Asset URLs</button>
+    <button onclick="checkNetworkTab()">Check Network Issues</button>
+
+    <script>
+        function log(message, type = 'info') {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = type;
+            div.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
+            results.appendChild(div);
+            console.log(message);
+        }
+
+        async function testAssetUrls() {
+            log('🧪 Testing asset URL accessibility...', 'info');
+            
+            // Get all script and link tags
+            const scripts = document.querySelectorAll('script[src]');
+            const links = document.querySelectorAll('link[href]');
+            
+            log(`Found ${scripts.length} script tags and ${links.length} link tags`, 'info');
+            
+            // Test each asset
+            for (let script of scripts) {
+                await testUrl(script.src, 'Script');
+            }
+            
+            for (let link of links) {
+                if (link.rel === 'stylesheet' || link.rel === 'modulepreload') {
+                    await testUrl(link.href, 'Link');
+                }
+            }
+        }
+
+        async function testUrl(url, type) {
+            try {
+                const response = await fetch(url, { method: 'HEAD' });
+                if (response.ok) {
+                    log(`✅ ${type}: ${url} - Status: ${response.status}`, 'success');
+                } else {
+                    log(`❌ ${type}: ${url} - Status: ${response.status} ${response.statusText}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ ${type}: ${url} - Error: ${error.message}`, 'error');
+            }
+        }
+
+        function checkNetworkTab() {
+            log('📊 Network Tab Analysis Instructions:', 'warning');
+            log('1. Open DevTools (F12)', 'info');
+            log('2. Go to Network tab', 'info');
+            log('3. Refresh the page', 'info');
+            log('4. Look for failed requests (red entries)', 'info');
+            log('5. Check if assets return 404, 403, or CORS errors', 'info');
+            log('6. Verify file paths match what is uploaded', 'info');
+        }
+
+        function runDiagnostics() {
+            document.getElementById('results').innerHTML = '';
+            log('🚀 Starting comprehensive diagnostics...', 'info');
+            
+            // Basic environment check
+            log(`🌐 Current URL: ${window.location.href}`, 'info');
+            log(`🏠 Hostname: ${window.location.hostname}`, 'info');
+            log(`📁 Pathname: ${window.location.pathname}`, 'info');
+            
+            // Check if we're on HTTPS
+            if (window.location.protocol === 'https:') {
+                log('🔒 Protocol: HTTPS (Good)', 'success');
+            } else {
+                log('⚠️ Protocol: HTTP (May cause issues)', 'warning');
+            }
+            
+            // Check for React
+            setTimeout(() => {
+                if (window.React) {
+                    log('⚛️ React: Loaded successfully', 'success');
+                } else {
+                    log('❌ React: Not found in global scope', 'error');
+                }
+            }, 2000);
+            
+            // Check root element
+            const root = document.getElementById('root');
+            if (root) {
+                log('📦 Root element: Found', 'success');
+                setTimeout(() => {
+                    if (root.children.length > 0) {
+                        log(`📦 Root content: ${root.children.length} child elements`, 'success');
+                    } else {
+                        log('📦 Root content: Empty (React app not mounted)', 'error');
+                    }
+                }, 3000);
+            } else {
+                log('❌ Root element: Not found', 'error');
+            }
+            
+            // Check for common errors
+            let errorCount = 0;
+            window.addEventListener('error', (e) => {
+                errorCount++;
+                log(`🚨 JS Error #${errorCount}: ${e.message}`, 'error');
+                log(`   File: ${e.filename}:${e.lineno}:${e.colno}`, 'error');
+            });
+            
+            // Check for unhandled promise rejections
+            window.addEventListener('unhandledrejection', (e) => {
+                log(`🚨 Unhandled Promise Rejection: ${e.reason}`, 'error');
+            });
+            
+            // Test asset loading
+            setTimeout(() => {
+                testAssetUrls();
+            }, 1000);
+            
+            log('⏳ Diagnostics running... Watch for results above', 'info');
+        }
+
+        // Auto-run on load
+        window.addEventListener('load', () => {
+            setTimeout(runDiagnostics, 500);
+        });
+
+        // Capture and log all console messages
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+
+        console.log = function(...args) {
+            log(`📝 Console Log: ${args.join(' ')}`, 'info');
+            originalLog.apply(console, args);
+        };
+
+        console.error = function(...args) {
+            log(`🚨 Console Error: ${args.join(' ')}`, 'error');
+            originalError.apply(console, args);
+        };
+
+        console.warn = function(...args) {
+            log(`⚠️ Console Warning: ${args.join(' ')}`, 'warning');
+            originalWarn.apply(console, args);
+        };
+    </script>
+</body>
+</html>

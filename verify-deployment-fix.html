@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LawMattersSG Deployment Verification</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .status { padding: 10px; margin: 10px 0; border-radius: 4px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 4px; overflow-x: auto; }
+        button { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin: 5px; }
+        button:hover { background: #0056b3; }
+        .test-result { margin: 10px 0; padding: 10px; border-left: 4px solid #007bff; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 LawMattersSG Deployment Verification</h1>
+        <p>This page helps verify that the deployment fix resolved the JavaScript errors.</p>
+        
+        <div id="results"></div>
+        
+        <button onclick="runTests()">🧪 Run Verification Tests</button>
+        <button onclick="clearCache()">🗑️ Clear Browser Cache</button>
+        <button onclick="checkAssets()">📁 Check Asset Loading</button>
+        
+        <div class="info">
+            <h3>📋 What This Fix Addressed:</h3>
+            <ul>
+                <li><strong>Asset Mismatch:</strong> Old index.html was referencing assets with timestamp 1751188485170</li>
+                <li><strong>Missing Files:</strong> New assets had timestamp 1751290207128 but weren't uploaded</li>
+                <li><strong>Cache Issues:</strong> Browser was loading cached versions of mismatched files</li>
+                <li><strong>Sync Problems:</strong> Partial file uploads created inconsistent state</li>
+            </ul>
+        </div>
+        
+        <div class="warning">
+            <h3>⚠️ If You Still See Errors:</h3>
+            <ol>
+                <li>Clear your browser cache completely (Ctrl+Shift+Delete)</li>
+                <li>Try opening the site in an incognito/private window</li>
+                <li>Check that ALL files were uploaded to Hostinger public_html</li>
+                <li>Verify the .htaccess file is present and correct</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        function addResult(message, type = 'info') {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `status ${type}`;
+            div.innerHTML = message;
+            results.appendChild(div);
+        }
+
+        function runTests() {
+            document.getElementById('results').innerHTML = '';
+            addResult('🔍 Starting verification tests...', 'info');
+            
+            // Test 1: Check if we're on the correct domain
+            const currentDomain = window.location.hostname;
+            if (currentDomain === 'craftchatbot.com') {
+                addResult('✅ Domain Check: Running on craftchatbot.com', 'success');
+            } else {
+                addResult(`⚠️ Domain Check: Running on ${currentDomain} (expected craftchatbot.com)`, 'warning');
+            }
+            
+            // Test 2: Check for JavaScript errors
+            let jsErrors = 0;
+            window.addEventListener('error', (e) => {
+                jsErrors++;
+                addResult(`❌ JavaScript Error: ${e.message} at ${e.filename}:${e.lineno}`, 'error');
+            });
+            
+            setTimeout(() => {
+                if (jsErrors === 0) {
+                    addResult('✅ JavaScript Error Check: No errors detected', 'success');
+                }
+            }, 2000);
+            
+            // Test 3: Check React loading
+            setTimeout(() => {
+                if (window.React) {
+                    addResult('✅ React Check: React is loaded and available', 'success');
+                } else {
+                    addResult('❌ React Check: React not found in global scope', 'error');
+                }
+            }, 1000);
+            
+            // Test 4: Check if root element has content
+            setTimeout(() => {
+                const root = document.getElementById('root');
+                if (root && root.children.length > 0) {
+                    addResult('✅ App Mount Check: React app successfully mounted', 'success');
+                } else {
+                    addResult('❌ App Mount Check: React app not mounted or root is empty', 'error');
+                }
+            }, 3000);
+            
+            addResult('⏳ Tests running... Results will appear above', 'info');
+        }
+
+        function clearCache() {
+            addResult('🗑️ Attempting to clear cache...', 'info');
+            
+            // Clear localStorage and sessionStorage
+            try {
+                localStorage.clear();
+                sessionStorage.clear();
+                addResult('✅ Cleared localStorage and sessionStorage', 'success');
+            } catch (e) {
+                addResult('❌ Failed to clear storage: ' + e.message, 'error');
+            }
+            
+            // Unregister service workers
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(registrations => {
+                    registrations.forEach(registration => {
+                        registration.unregister();
+                    });
+                    addResult('✅ Unregistered service workers', 'success');
+                });
+            }
+            
+            // Force reload
+            setTimeout(() => {
+                addResult('🔄 Reloading page to apply cache clearing...', 'info');
+                window.location.reload(true);
+            }, 1000);
+        }
+
+        function checkAssets() {
+            addResult('📁 Checking asset loading...', 'info');
+            
+            // Check if main script is loaded
+            const scripts = document.querySelectorAll('script[src*="index-"]');
+            if (scripts.length > 0) {
+                const mainScript = scripts[0].src;
+                addResult(`✅ Main Script: ${mainScript}`, 'success');
+                
+                // Check if the timestamp matches expected
+                if (mainScript.includes('1751290207128')) {
+                    addResult('✅ Asset Timestamp: Correct timestamp detected (1751290207128)', 'success');
+                } else {
+                    addResult('⚠️ Asset Timestamp: Unexpected timestamp in asset URL', 'warning');
+                }
+            } else {
+                addResult('❌ Main Script: No main script found', 'error');
+            }
+            
+            // Check CSS
+            const stylesheets = document.querySelectorAll('link[href*="index-"]');
+            if (stylesheets.length > 0) {
+                addResult(`✅ Stylesheet: ${stylesheets[0].href}`, 'success');
+            } else {
+                addResult('❌ Stylesheet: No main stylesheet found', 'error');
+            }
+        }
+
+        // Auto-run tests when page loads
+        window.addEventListener('load', () => {
+            setTimeout(runTests, 500);
+        });
+    </script>
+</body>
+</html>

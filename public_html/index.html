@@ -1,13 +1,16 @@
-
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- Cache busting meta tags -->
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    
+    <!-- AGGRESSIVE CACHE BUSTING -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
+    <meta http-equiv="Last-Modified" content="Thu, 01 Jan 1970 00:00:00 GMT" />
+    <meta name="cache-buster" content="1751291109711" />
+    
     <title>LawMatters Singapore - Expert Legal Solutions</title>
     <meta name="description" content="Singapore's premier law firm with 25+ years of experience. Expert legal solutions in corporate law, employment law, real estate, family law, and more." />
     <meta name="author" content="LawMatters Singapore" />
@@ -20,17 +23,48 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@lawmatterssg" />
     <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
-    <script type="module" crossorigin src="./assets/index-DIADPChn-1751188485170.js"></script>
-    <link rel="modulepreload" crossorigin href="./assets/react-vendor-C9QDz5CC-1751188485170.js">
-    <link rel="modulepreload" crossorigin href="./assets/supabase-CTZOyI3h-1751188485170.js">
-    <link rel="modulepreload" crossorigin href="./assets/ui-components-3sBZsGlG-1751188485170.js">
-    <link rel="modulepreload" crossorigin href="./assets/data-fetching-D7KhMdOQ-1751188485170.js">
-    <link rel="modulepreload" crossorigin href="./assets/utilities-DwzqNXNX-1751188485170.js">
-    <link rel="modulepreload" crossorigin href="./assets/forms-Jolb6-sF-1751188485170.js">
-    <link rel="stylesheet" crossorigin href="./assets/index-Dsh4Xwa--1751188485170.css">
+    
+    <!-- Cache-busted assets -->
+    <script type="module" crossorigin src="./assets/index-CIUloMom-1751290207128.js?v=1751291109711"></script>
+    <link rel="modulepreload" crossorigin href="./assets/react-vendor-C9QDz5CC-1751290207128.js?v=1751291109711">
+    <link rel="modulepreload" crossorigin href="./assets/supabase-krEVv_JN-1751290207128.js?v=1751291109711">
+    <link rel="modulepreload" crossorigin href="./assets/ui-components-NADxK8eM-1751290207128.js?v=1751291109711">
+    <link rel="modulepreload" crossorigin href="./assets/data-fetching-Ch-Btsro-1751290207128.js?v=1751291109711">
+    <link rel="modulepreload" crossorigin href="./assets/utilities-kqqoeiVg-1751290207128.js?v=1751291109711">
+    <link rel="modulepreload" crossorigin href="./assets/forms-DcZe9WbG-1751290207128.js?v=1751291109711">
+    <link rel="stylesheet" crossorigin href="./assets/index-Dsh4Xwa--1751290207128.css?v=1751291109711">
   </head>
 
   <body>
-    <div id="root"></div>
+    <div id="root"></div>
+    
+    <!-- Cache busting script -->
+    <script>
+      // Force cache refresh
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          for(let registration of registrations) {
+            registration.unregister();
+          }
+        });
+      }
+      
+      // Clear all storage
+      try {
+        localStorage.clear();
+        sessionStorage.clear();
+        if ('caches' in window) {
+          caches.keys().then(names => {
+            names.forEach(name => {
+              caches.delete(name);
+            });
+          });
+        }
+      } catch (e) {
+        console.log('Cache clearing failed:', e);
+      }
+      
+      console.log('🔄 Cache busting active - timestamp: 1751291109711');
+    </script>
   </body>
 </html>

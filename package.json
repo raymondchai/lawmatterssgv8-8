@@ -22,6 +22,8 @@
     "test:templates": "vitest run src/__tests__/services/templateMarketplace.test.ts src/__tests__/services/templateAnalytics.test.ts src/__tests__/components/TemplateBrowser.test.tsx src/__tests__/integration/templateMarketplace.test.ts",
     "test:templates:watch": "vitest src/__tests__/services/templateMarketplace.test.ts src/__tests__/services/templateAnalytics.test.ts src/__tests__/components/TemplateBrowser.test.tsx src/__tests__/integration/templateMarketplace.test.ts",
     "test:e2e:templates": "playwright test tests/e2e/templateMarketplace.spec.ts",
+    "test:e2e:auth": "playwright test tests/e2e/auth-signout.spec.ts",
+    "test:e2e:auth:production": "PLAYWRIGHT_BASE_URL=https://craftchatbot.com playwright test tests/e2e/auth-signout.spec.ts",
     "playwright:install": "playwright install",
     "check-lockfiles": "node scripts/check-lockfiles.cjs",
     "clean-lockfiles": "del yarn.lock pnpm-lock.yaml bun.lockb 2>nul || rm -f yarn.lock pnpm-lock.yaml bun.lockb",

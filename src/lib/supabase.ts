@@ -26,11 +26,12 @@ if (!SUPA_KEY || SUPA_KEY.includes('placeholder') || SUPA_KEY.length < 100) {
 }
 
 // 🔧 STEP 2: BULLETPROOF SUPABASE CLIENT (SINGLE SOURCE OF TRUTH)
+// 🚨 CRITICAL: DISABLED CLIENT-SIDE SESSION PERSISTENCE FOR RELIABLE SIGN-OUT
 export const supabase = createClient<Database>(SUPA_URL, SUPA_KEY, {
   auth: {
-    persistSession: true,
-    detectSessionInUrl: true,
-    autoRefreshToken: true,
+    persistSession: false,        // 🚨 DISABLED: No localStorage/IndexedDB session storage
+    detectSessionInUrl: false,    // 🚨 DISABLED: No URL-based session detection
+    autoRefreshToken: false,      // 🚨 DISABLED: No automatic token refresh
     flowType: 'pkce',
     // Add timeout for auth operations
     debug: import.meta.env.DEV
@@ -55,11 +56,14 @@ if (typeof window !== 'undefined') {
   // Override any potential telemetry functions
   (window as any).supabase = undefined;
 
-  // Log successful client creation
-  console.log('✅ Supabase client created successfully:', {
+  // Log successful client creation with new architecture
+  console.log('✅ Supabase client created successfully (SERVER-CONTROLLED SESSIONS):', {
     url: SUPA_URL,
     timestamp: new Date().toISOString(),
-    clientReady: true
+    clientReady: true,
+    persistSession: false,
+    autoRefreshToken: false,
+    architecture: 'cookie-only-sessions'
   });
 }
 
@@ -74,8 +78,37 @@ export const getCurrentUser = async () => {
 };
 
 export const signOut = async () => {
+  console.log('🚪 Starting sign-out process (server-controlled sessions)...');
+
+  // Sign out from Supabase (this will clear server-side session)
   const { error } = await supabase.auth.signOut();
-  if (error) throw error;
+  if (error) {
+    console.error('❌ Sign-out error:', error);
+    throw error;
+  }
+
+  // Extra cleanup: Clear any potential client-side storage (defensive)
+  if (typeof window !== 'undefined') {
+    try {
+      // Clear localStorage keys that might contain auth data
+      const keysToRemove = Object.keys(localStorage).filter(key =>
+        key.includes('supabase') || key.includes('auth') || key.includes('session')
+      );
+      keysToRemove.forEach(key => localStorage.removeItem(key));
+
+      // Clear sessionStorage as well
+      const sessionKeysToRemove = Object.keys(sessionStorage).filter(key =>
+        key.includes('supabase') || key.includes('auth') || key.includes('session')
+      );
+      sessionKeysToRemove.forEach(key => sessionStorage.removeItem(key));
+
+      console.log('✅ Client-side storage cleared (defensive cleanup)');
+    } catch (cleanupError) {
+      console.warn('⚠️ Storage cleanup failed (non-critical):', cleanupError);
+    }
+  }
+
+  console.log('✅ Sign-out completed successfully');
 };
 
 export const signInWithEmail = async (email: string, password: string) => {

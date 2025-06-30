@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useMemo, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabase';
+import { sessionManager, type SessionUser } from '@/lib/services/sessionManager';
 import { authConfig } from '@/lib/auth/config';
 import { profilesApi } from '@/lib/api/profiles';
 // Removed analytics imports to simplify sign-out process
@@ -78,6 +78,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
   const isInitialLoadRef = useRef(true); // Shared ref for initial load state
+  const isSigningOutRef = useRef(false); // Flag to prevent auth handler interference during sign out
 
   // 🔧 STEP 4: PROFILE CACHING & PERSISTENCE
   const persistProfile = (profileData: ProfileUser | null) => {
@@ -140,33 +141,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  // 🔧 STEP 2: BULLETPROOF AUTH INITIALIZATION WITH TIMEOUT PROTECTION
+  // 🔧 STEP 2: SERVER-CONTROLLED SESSION INITIALIZATION
   useEffect(() => {
     let mounted = true;
-    let timeoutId: NodeJS.Timeout | null = null;
     let maxLoadingTimeoutId: NodeJS.Timeout;
 
     const initializeAuth = async () => {
-      console.log('🔧 AUTH INIT: Starting bulletproof authentication initialization...');
+      console.log('🔧 AUTH INIT: Starting server-controlled session initialization...');
 
       try {
         // Check if we should force sign out (for testing purposes)
         const forceSignOut = sessionStorage.getItem('force-signout') === 'true';
 
         if (forceSignOut) {
-          console.log('🔧 AUTH INIT: Force sign out requested - clearing all auth data...');
+          console.log('🔧 AUTH INIT: Force sign out requested - clearing all data...');
 
           try {
-            // Clear all auth-related storage
+            // Clear session manager memory state
+            sessionManager.clearMemoryState();
+
+            // Clear any remaining client-side storage
             const authKeys = [
-              'sb-kvlaydeyqidlfpfutbmp-auth-token',
-              'supabase.auth.token',
-              'auth-token',
-              'user-session',
-              'auth-state',
               'user-profile-cache',
-              'supabase-auth-token',
-              'auth-session'
+              'force-signout'
             ];
 
             authKeys.forEach(key => {
@@ -178,21 +175,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               }
             });
 
-            // Clear all localStorage keys that start with 'sb-'
-            const keysToRemove = [];
-            for (let i = 0; i < localStorage.length; i++) {
-              const key = localStorage.key(i);
-              if (key && key.startsWith('sb-')) {
-                keysToRemove.push(key);
-              }
-            }
-            keysToRemove.forEach(key => localStorage.removeItem(key));
-
-            // Force sign out from Supabase
-            await supabase.auth.signOut();
-
-            // Remove the force signout flag
-            sessionStorage.removeItem('force-signout');
+            // Force sign out from session manager (clears server-side session)
+            await sessionManager.signOut();
 
             console.log('✅ Force sign out completed');
 
@@ -227,59 +211,67 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           }
         }, 5000);
 
-        // Get current session with comprehensive error handling
-        console.log('🔧 AUTH INIT: Getting current session...');
+        // Validate current session with server
+        console.log('🔧 AUTH INIT: Validating server-side session...');
 
-        // Wrap getSession in a race with timeout
-        const sessionPromise = supabase.auth.getSession();
-        const timeoutPromise = new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('getSession timeout')), 2000)
-        );
+        try {
+          const sessionData = await sessionManager.validateSession();
 
-        const { data: { session }, error } = await Promise.race([sessionPromise, timeoutPromise]);
+          if (!mounted) return;
 
-        if (!mounted) return;
+          if (sessionData) {
+            console.log('🔧 AUTH INIT: Valid session found for user:', sessionData.user.email);
 
-        // Clear timeout since we got a response
-        clearTimeout(timeoutId);
+            // Convert SessionUser to Supabase User format for compatibility
+            const supabaseUser: User = {
+              id: sessionData.user.id,
+              email: sessionData.user.email,
+              aud: 'authenticated',
+              role: 'authenticated',
+              email_confirmed_at: new Date().toISOString(),
+              phone_confirmed_at: null,
+              confirmed_at: new Date().toISOString(),
+              last_sign_in_at: new Date().toISOString(),
+              app_metadata: {},
+              user_metadata: {},
+              identities: [],
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            };
 
-        if (error) {
-          console.error('🔧 AUTH INIT: Session error:', error);
-          // Don't throw - handle gracefully
-          setSession(null);
-          setUser(null);
-          safeSetProfile(null);
-          setLoading(false);
-          return;
-        }
+            // Create a minimal session object for compatibility
+            const session: Session = {
+              access_token: 'server-managed',
+              refresh_token: 'server-managed',
+              expires_in: 86400,
+              expires_at: Math.floor(Date.now() / 1000) + 86400,
+              token_type: 'bearer',
+              user: supabaseUser
+            };
 
-        if (session?.user) {
-          console.log('🔧 AUTH INIT: Valid session found for:', session.user.email);
-          setSession(session);
-          setUser(session.user);
+            setSession(session);
+            setUser(supabaseUser);
 
-          // Fetch fresh profile data with timeout
-          try {
-            const profilePromise = profilesApi.getProfile(session.user.id);
-            const profileTimeoutPromise = new Promise<never>((_, reject) =>
-              setTimeout(() => reject(new Error('Profile fetch timeout')), 2000)
-            );
-
-            const profileData = await Promise.race([profilePromise, profileTimeoutPromise]);
-
-            if (mounted && profileData) {
-              console.log('🔧 AUTH INIT: Fresh profile loaded:', profileData.role);
-              safeSetProfile(profileData);
+            if (sessionData.profile) {
+              console.log('🔧 AUTH INIT: Profile loaded:', sessionData.profile.role);
+              safeSetProfile(sessionData.profile);
+            } else {
+              safeSetProfile(null);
             }
-          } catch (profileError) {
-            console.warn('🔧 AUTH INIT: Profile fetch error/timeout, keeping cached:', profileError);
-            // Keep cached profile if fetch fails or times out
+          } else {
+            console.log('🔧 AUTH INIT: No valid session found');
+            setSession(null);
+            setUser(null);
+            safeSetProfile(null);
           }
-        } else {
-          console.log('🔧 AUTH INIT: No valid session found');
-          setSession(null);
-          setUser(null);
-          safeSetProfile(null);
+        } catch (sessionError) {
+          console.error('🔧 AUTH INIT: Session validation failed:', sessionError);
+          // Handle gracefully - set signed out state
+          if (mounted) {
+            setSession(null);
+            setUser(null);
+            safeSetProfile(null);
+          }
         }
       } catch (error) {
         console.error('🔧 AUTH INIT: Critical error (handled gracefully):', error);
@@ -330,6 +322,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(
         async (event, session) => {
           console.log('🔧 AUTH LISTENER: State change -', event, session?.user?.email || 'no user');
+
+          // Skip processing if we're in the middle of signing out
+          if (isSigningOutRef.current) {
+            console.log('🔧 AUTH LISTENER: Skipping event processing - sign out in progress');
+            return;
+          }
 
           // Handle edge case: revoked tokens
           if (session?.user && session.expires_at) {
@@ -450,34 +448,46 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      console.log('🔐 Starting server-controlled sign-in...');
 
-      if (error) {
-        console.error('Login error:', error);
+      const { user, profile } = await sessionManager.signIn(email, password);
 
-        // Handle email not confirmed error
-        if (error.message?.includes('Email not confirmed')) {
-          throw new Error('Please check your email and click the confirmation link before signing in.');
-        }
+      // Convert SessionUser to Supabase User format for compatibility
+      const supabaseUser: User = {
+        id: user.id,
+        email: user.email,
+        aud: 'authenticated',
+        role: 'authenticated',
+        email_confirmed_at: new Date().toISOString(),
+        phone_confirmed_at: null,
+        confirmed_at: new Date().toISOString(),
+        last_sign_in_at: new Date().toISOString(),
+        app_metadata: {},
+        user_metadata: {},
+        identities: [],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
 
-        throw error;
-      }
+      // Create a minimal session object for compatibility
+      const session: Session = {
+        access_token: 'server-managed',
+        refresh_token: 'server-managed',
+        expires_in: 86400,
+        expires_at: Math.floor(Date.now() / 1000) + 86400,
+        token_type: 'bearer',
+        user: supabaseUser
+      };
 
-      // Check if user email is verified
-      if (data.user && !data.user.email_confirmed_at) {
-        console.warn('User email not verified:', data.user.email);
-        await supabase.auth.signOut(); // Sign out unverified user
-        throw new Error('Please verify your email address before signing in. Check your inbox for a confirmation email.');
-      }
+      // Update state
+      setSession(session);
+      setUser(supabaseUser);
+      safeSetProfile(profile);
 
-      // For now, skip 2FA and security tracking to avoid console errors
-      console.log('Login successful:', data.user?.email);
+      console.log('✅ Server-controlled sign-in successful:', user.email);
       return {};
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('❌ Server-controlled sign-in failed:', error);
       throw error;
     }
   };
@@ -497,22 +507,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const signOut = async () => {
-    console.log('🚪 SIGN OUT - Clearing all auth state and redirecting...');
+    console.log('🚪 SIGN OUT - Starting bulletproof sign out process...');
 
     try {
-      // STEP 1: Clear React state immediately
-      setLoading(false);
-      setSession(null);
-      setUser(null);
-      setProfile(null);
-      setRequiresTwoFactor(false);
-      console.log('✅ React state cleared');
+      // STEP 1: Set a flag to prevent auth state change handler from interfering
+      console.log('🔧 Setting sign out in progress flag...');
+      isSigningOutRef.current = true;
 
-      // STEP 2: Clear profile cache
-      persistProfile(null);
-      console.log('✅ Profile cache cleared');
-
-      // STEP 3: Clear all auth storage
+      // STEP 2: Clear all auth storage FIRST (before any async operations)
+      console.log('🧹 Clearing all auth storage...');
       const authKeys = [
         'sb-kvlaydeyqidlfpfutbmp-auth-token',
         'supabase.auth.token',
@@ -544,22 +547,54 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       keysToRemove.forEach(key => localStorage.removeItem(key));
       console.log('✅ Storage cleared');
 
-      // STEP 4: Sign out from Supabase
+      // STEP 3: Clear React state immediately
+      console.log('🔧 Clearing React auth state...');
+      setLoading(false);
+      setSession(null);
+      setUser(null);
+      setProfile(null);
+      setRequiresTwoFactor(false);
+      console.log('✅ React state cleared');
+
+      // STEP 4: Clear profile cache
+      persistProfile(null);
+      console.log('✅ Profile cache cleared');
+
+      // STEP 5: Sign out from session manager (clears server-side session and HTTP-only cookie)
+      console.log('🔧 Attempting server-controlled sign out...');
       try {
-        await supabase.auth.signOut();
-        console.log('✅ Supabase sign out completed');
+        await sessionManager.signOut();
+        console.log('✅ Server-controlled sign out completed');
       } catch (e) {
-        console.warn('Supabase sign out failed (continuing anyway):', e);
+        console.warn('⚠️ Server sign out failed (local state already cleared):', e);
       }
 
-      // STEP 5: Redirect to homepage
-      console.log('🔄 Redirecting to homepage...');
-      window.location.href = '/';
+      // STEP 6: Force immediate redirect (don't wait for anything else)
+      console.log('🔄 Forcing immediate redirect to homepage...');
+
+      // Reset the flag before redirect
+      isSigningOutRef.current = false;
+      window.location.replace('/');
 
     } catch (error) {
-      console.error('Sign out error:', error);
+      console.error('❌ Sign out error:', error);
+
+      // CRITICAL: Always ensure we're signed out locally and redirect
+      console.log('🚨 Error during sign out - forcing emergency cleanup...');
+      setLoading(false);
+      setSession(null);
+      setUser(null);
+      setProfile(null);
+      setRequiresTwoFactor(false);
+
+      // Clear session manager memory state
+      sessionManager.clearMemoryState();
+
+      // Reset the flag before redirect
+      isSigningOutRef.current = false;
+
       // Force redirect even if there's an error
-      window.location.href = '/';
+      window.location.replace('/');
     }
   };
 

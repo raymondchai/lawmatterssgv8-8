@@ -1,0 +1,23 @@
+# Minimal .htaccess for React app
+# Use this if the current .htaccess is causing issues
+
+# Ensure proper MIME types
+AddType application/javascript .js
+AddType text/css .css
+AddType text/html .html
+
+# React Router - Handle client-side routing
+RewriteEngine On
+
+# Skip rewrite for existing files and directories
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Skip rewrite for assets
+RewriteCond %{REQUEST_URI} !^/assets/
+
+# Skip rewrite for common file extensions
+RewriteCond %{REQUEST_URI} !\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$
+
+# Redirect all other requests to index.html
+RewriteRule ^.*$ /index.html [L]

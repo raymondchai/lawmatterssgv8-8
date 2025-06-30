@@ -1,0 +1,35 @@
+
+🚀 DEPLOYMENT INSTRUCTIONS
+==========================
+
+1. COMPLETE FILE REPLACEMENT:
+   - Delete ALL files in public_html/ directory
+   - Upload ALL files from dist/ directory
+   - Ensure .htaccess file is uploaded
+
+2. BROWSER CACHE CLEARING:
+   - Press Ctrl+Shift+Delete (Chrome/Edge)
+   - Select "All time" for time range
+   - Check all boxes (cookies, cache, etc.)
+   - Click "Clear data"
+
+3. ALTERNATIVE CACHE CLEARING:
+   - Open Developer Tools (F12)
+   - Right-click refresh button
+   - Select "Empty Cache and Hard Reload"
+
+4. VERIFICATION:
+   - Open https://craftchatbot.com in incognito mode
+   - Check console for "Cache busting active" message
+   - Verify no authentication errors
+
+5. IF STILL HAVING ISSUES:
+   - Try different browser
+   - Check Hostinger cache settings
+   - Contact Hostinger support to clear server cache
+
+The new files include:
+- Aggressive cache-busting headers
+- Timestamp-based asset URLs
+- Service worker clearing
+- Storage clearing scripts

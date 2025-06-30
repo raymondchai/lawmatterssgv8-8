@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Asset Test</title>
+</head>
+<body>
+    <h1>Testing Asset Accessibility</h1>
+    <div id="results"></div>
+    
+    <script>
+        async function testAsset(url) {
+            try {
+                const response = await fetch(url);
+                const status = response.status;
+                const statusText = response.statusText;
+                
+                document.getElementById('results').innerHTML += 
+                    `<p style="color: ${status === 200 ? 'green' : 'red'}">
+                        ${url}: ${status} ${statusText}
+                    </p>`;
+                    
+                console.log(`${url}: ${status} ${statusText}`);
+            } catch (error) {
+                document.getElementById('results').innerHTML += 
+                    `<p style="color: red">${url}: ERROR - ${error.message}</p>`;
+                console.error(`${url}: ERROR - ${error.message}`);
+            }
+        }
+        
+        // Test the main assets
+        const assetsToTest = [
+            './assets/index-CIUloMom-1751290207128.js',
+            './assets/react-vendor-C9QDz5CC-1751290207128.js',
+            './assets/supabase-krEVv_JN-1751290207128.js',
+            './assets/index-Dsh4Xwa--1751290207128.css'
+        ];
+        
+        assetsToTest.forEach(testAsset);
+    </script>
+</body>
+</html>
