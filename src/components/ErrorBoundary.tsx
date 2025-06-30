@@ -36,7 +36,19 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
+    console.error('🚨 ErrorBoundary caught an error:', error, errorInfo);
+
+    // Enhanced auth error detection
+    const isAuthError = this.isAuthRelatedError(error, errorInfo);
+    if (isAuthError) {
+      console.error('🔐 AUTH ERROR DETECTED in ErrorBoundary:', {
+        message: error.message,
+        stack: error.stack,
+        componentStack: errorInfo.componentStack,
+        timestamp: new Date().toISOString()
+      });
+    }
+
     this.setState({
       error,
       errorInfo
@@ -55,7 +67,8 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
           message: `React Error Boundary (${this.props.level || 'unknown'}): ${error.message}`,
           stack: error.stack,
           componentStack: errorInfo.componentStack,
-          level: this.props.level || 'component'
+          level: this.props.level || 'component',
+          isAuthError
         });
       }
     } catch (trackingError) {
@@ -63,29 +76,95 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
     }
   }
 
+  // Enhanced auth error detection
+  private isAuthRelatedError = (error: Error, errorInfo?: React.ErrorInfo): boolean => {
+    const errorMessage = error.message?.toLowerCase() || '';
+    const errorStack = error.stack?.toLowerCase() || '';
+    const componentStack = errorInfo?.componentStack?.toLowerCase() || '';
+
+    return (
+      errorMessage.includes('auth') ||
+      errorMessage.includes('supabase') ||
+      errorMessage.includes('session') ||
+      errorMessage.includes('useauth') ||
+      errorMessage.includes('authcontext') ||
+      errorStack.includes('authcontext') ||
+      componentStack.includes('authcontext') ||
+      componentStack.includes('authprovider')
+    );
+  };
+
   resetError = () => {
     if (this.state.retryCount < this.maxRetries) {
-      this.setState({
+      this.setState(prevState => ({
         hasError: false,
         error: undefined,
         errorInfo: undefined,
-        retryCount: this.state.retryCount + 1
-      });
+        retryCount: prevState.retryCount + 1
+      }));
     } else {
       // Max retries reached, redirect to home
       window.location.href = '/';
     }
   };
 
-  getErrorMessage = () => {
-    const { error } = this.state;
-    const { level } = this.props;
+  // Auth-specific recovery function
+  handleAuthRecovery = () => {
+    console.log('🔐 ErrorBoundary: Auth recovery initiated');
 
-    if (level === 'auth' && error?.message?.includes('useAuth')) {
+    // Clear auth storage
+    const authKeys = [
+      'sb-kvlaydeyqidlfpfutbmp-auth-token',
+      'supabase.auth.token',
+      'auth-token',
+      'user-profile-cache',
+      'user-session',
+      'auth-state'
+    ];
+
+    authKeys.forEach(key => {
+      try {
+        localStorage.removeItem(key);
+        sessionStorage.removeItem(key);
+      } catch (e) {
+        console.warn('Failed to clear auth key during recovery:', key);
+      }
+    });
+
+    // Redirect to login
+    window.location.href = '/auth/login';
+  };
+
+  getErrorMessage = () => {
+    const { error, errorInfo } = this.state;
+    const { level } = this.props;
+    const isAuthError = this.isAuthRelatedError(error || new Error(), errorInfo);
+
+    // Enhanced auth error detection
+    if (isAuthError || level === 'auth') {
+      if (error?.message?.includes('AuthSessionMissingError') || error?.message?.includes('session missing')) {
+        return {
+          title: 'Authentication Session Expired',
+          description: 'Your authentication session has expired or is missing. Please sign in again.',
+          suggestion: 'Clear your browser data and sign in again if the problem persists.',
+          isAuthError: true
+        };
+      }
+
+      if (error?.message?.includes('supabase is not defined')) {
+        return {
+          title: 'Authentication Service Error',
+          description: 'The authentication service failed to initialize properly.',
+          suggestion: 'This is usually a temporary issue. Try refreshing the page.',
+          isAuthError: true
+        };
+      }
+
       return {
         title: 'Authentication Service Unavailable',
         description: 'The authentication system is temporarily unavailable. You can still browse the site as a guest.',
-        suggestion: 'Try refreshing the page or continue without signing in.'
+        suggestion: 'Try refreshing the page or continue without signing in.',
+        isAuthError: true
       };
     }
 
@@ -93,14 +172,16 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
       return {
         title: 'Component Loading Error',
         description: 'A component failed to load properly. This might be a temporary issue.',
-        suggestion: 'Please try refreshing the page.'
+        suggestion: 'Please try refreshing the page.',
+        isAuthError: false
       };
     }
 
     return {
       title: 'Something went wrong',
       description: 'We encountered an unexpected error. Please try refreshing the page or go back to the homepage.',
-      suggestion: 'If the problem persists, please contact support.'
+      suggestion: 'If the problem persists, please contact support.',
+      isAuthError: false
     };
   };
 
@@ -135,20 +216,29 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
         );
       }
 
-      // Auth-level error (show guest mode option)
-      if (this.props.level === 'auth') {
+      // Auth-level error (show auth recovery options)
+      if (this.props.level === 'auth' || errorMessage.isAuthError) {
         return (
-          <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 my-4">
+          <div className="rounded-lg border border-red-200 bg-red-50 p-4 my-4">
             <div className="flex items-start">
-              <Shield className="h-5 w-5 text-yellow-600 mt-0.5" />
+              <Shield className="h-5 w-5 text-red-600 mt-0.5" />
               <div className="ml-3 flex-1">
-                <h3 className="text-sm font-medium text-yellow-800">
+                <h3 className="text-sm font-medium text-red-800">
                   {errorMessage.title}
                 </h3>
-                <p className="text-sm text-yellow-700 mt-1">
+                <p className="text-sm text-red-700 mt-1">
                   {errorMessage.description}
                 </p>
-                <div className="mt-3 flex space-x-2">
+                <div className="mt-3 flex space-x-2 flex-wrap gap-2">
+                  <Button
+                    onClick={this.handleAuthRecovery}
+                    variant="outline"
+                    size="sm"
+                    className="bg-white"
+                  >
+                    <Shield className="h-3 w-3 mr-1" />
+                    Clear Auth & Sign In
+                  </Button>
                   <Button
                     onClick={this.resetError}
                     variant="outline"
@@ -159,7 +249,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
                     {this.state.retryCount >= this.maxRetries ? 'Max retries' : 'Retry'}
                   </Button>
                   <Button
-                    onClick={() => window.location.reload()}
+                    onClick={() => window.location.href = '/'}
                     variant="outline"
                     size="sm"
                   >

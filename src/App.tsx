@@ -43,6 +43,8 @@ import BasicTest from "./pages/BasicTest";
 import ClearAuth from "./pages/ClearAuth";
 import LogoutTest from "./pages/LogoutTest";
 import EmergencyLogout from "./pages/EmergencyLogout";
+import AuthFixTest from "./pages/AuthFixTest";
+import SignOutTest from "./pages/SignOutTest";
 import RAGKnowledge from "./pages/dashboard/RAGKnowledge";
 import { ROUTES } from "@/lib/config/constants";
 import { AuthenticatedRoute, OptionalAuthRoute } from "@/components/auth/ProtectedRoute";
@@ -52,6 +54,7 @@ import AuthErrorBoundary from "@/components/auth/AuthErrorBoundary";
 // Import test utilities for debugging in production
 if (import.meta.env.DEV || import.meta.env.VITE_DEBUG_MODE === 'true') {
   import("@/test/platformStatsTest");
+  import("@/test/authDiagnostic");
 }
 
 // Lazy load heavy components to avoid loading large libraries on initial page load
@@ -196,6 +199,8 @@ const App = () => {
               <Route path="/clear-auth" element={<ClearAuth />} />
               <Route path="/logout-test" element={<LogoutTest />} />
               <Route path="/emergency-logout" element={<EmergencyLogout />} />
+              <Route path="/auth-fix-test" element={<AuthFixTest />} />
+              <Route path="/signout-test" element={<SignOutTest />} />
               <Route path={ROUTES.dashboard} element={
                 <AuthenticatedRoute>
                   <Dashboard />
