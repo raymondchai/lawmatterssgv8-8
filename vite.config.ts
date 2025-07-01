@@ -1,5 +1,5 @@
 import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react-swc";
+import react from "@vitejs/plugin-react";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { copyFileSync, existsSync } from "fs";
@@ -30,14 +30,12 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [
     react({
-      // Force consistent JSX runtime
-      jsxRuntime: 'automatic',
-      jsxImportSource: 'react',
-      // Ensure React is always available
+      // Use classic JSX runtime for maximum compatibility
+      jsxRuntime: 'classic',
+      jsxImportSource: undefined,
+      // Disable SWC optimizations that can cause issues
       babel: {
-        plugins: [
-          ['@babel/plugin-transform-react-jsx', { runtime: 'automatic' }]
-        ]
+        plugins: []
       }
     }),
     mode === 'development' && componentTagger(),
@@ -67,51 +65,8 @@ export default defineConfig(({ mode }) => ({
         assetFileNames: `assets/[name]-[hash]-${Date.now()}.[ext]`,
         manualChunks: {
           // CRITICAL: React must be in a separate chunk that loads FIRST
-          'react-vendor': ['react', 'react-dom', 'react-dom/client', 'react/jsx-runtime'],
-
-          // UI components that depend on React
-          'ui-components': [
-            '@radix-ui/react-accordion',
-            '@radix-ui/react-alert-dialog',
-            '@radix-ui/react-aspect-ratio',
-            '@radix-ui/react-avatar',
-            '@radix-ui/react-checkbox',
-            '@radix-ui/react-collapsible',
-            '@radix-ui/react-context-menu',
-            '@radix-ui/react-dialog',
-            '@radix-ui/react-dropdown-menu',
-            '@radix-ui/react-hover-card',
-            '@radix-ui/react-label',
-            '@radix-ui/react-menubar',
-            '@radix-ui/react-navigation-menu',
-            '@radix-ui/react-popover',
-            '@radix-ui/react-progress',
-            '@radix-ui/react-radio-group',
-            '@radix-ui/react-scroll-area',
-            '@radix-ui/react-select',
-            '@radix-ui/react-separator',
-            '@radix-ui/react-slider',
-            '@radix-ui/react-slot',
-            '@radix-ui/react-switch',
-            '@radix-ui/react-tabs',
-            '@radix-ui/react-toast',
-            '@radix-ui/react-toggle',
-            '@radix-ui/react-toggle-group',
-            '@radix-ui/react-tooltip',
-            'lucide-react',
-            'class-variance-authority',
-            'clsx',
-            'tailwind-merge'
-          ],
-
-          // Other chunks
-          'data-fetching': ['@tanstack/react-query'],
-          'forms': ['react-hook-form', '@hookform/resolvers', 'zod'],
-          'utilities': ['date-fns', 'lodash', 'uuid'],
+          'react-vendor': ['react', 'react-dom'],
           'supabase': ['@supabase/supabase-js'],
-          'ai-services': ['openai'],
-          'pdf-worker': ['pdfjs-dist'],
-          'ocr-worker': ['tesseract.js']
         },
       },
     },
@@ -142,10 +97,7 @@ export default defineConfig(({ mode }) => ({
     include: [
       'react',
       'react-dom',
-      'react-dom/client',
-      'react-router-dom',
-      'react/jsx-runtime',
-      'react/jsx-dev-runtime'
+      'react-router-dom'
     ],
     exclude: ['tesseract.js', 'pdfjs-dist'], // Exclude heavy libraries from optimization
     force: true, // Force re-optimization

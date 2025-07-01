@@ -1,4 +1,4 @@
-import{d as e}from"./react-vendor-C9QDz5CC-1751290207128.js";import{c as t}from"./ocr-worker-CXA20UID-1751290207128.js";var r={exports:{}};
+import{d as e}from"./react-vendor-92YuBQvb-1751326256027.js";import{c as t}from"./_commonjs-dynamic-modules-DT2jeOaC-1751326256027.js";var r={exports:{}};
 /*!
 
 JSZip v3.10.1 - A JavaScript class for generating and reading zip files
