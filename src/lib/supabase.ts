@@ -25,19 +25,17 @@ if (!SUPA_KEY || SUPA_KEY.includes('placeholder') || SUPA_KEY.length < 100) {
   throw new Error('🚨 CRITICAL: Invalid or missing VITE_SUPABASE_ANON_KEY');
 }
 
-// 🔧 STEP 2: BULLETPROOF SUPABASE CLIENT (SINGLE SOURCE OF TRUTH)
-// 🚨 CRITICAL: DISABLED CLIENT-SIDE SESSION PERSISTENCE FOR RELIABLE SIGN-OUT
+// 🔧 STEP 2: SIMPLIFIED SUPABASE CLIENT WITH STANDARD AUTH
 export const supabase = createClient<Database>(SUPA_URL, SUPA_KEY, {
   auth: {
-    persistSession: false,        // 🚨 DISABLED: No localStorage/IndexedDB session storage
-    detectSessionInUrl: false,    // 🚨 DISABLED: No URL-based session detection
-    autoRefreshToken: false,      // 🚨 DISABLED: No automatic token refresh
+    persistSession: true,         // ✅ ENABLED: Standard session persistence
+    detectSessionInUrl: true,     // ✅ ENABLED: Standard URL-based session detection
+    autoRefreshToken: true,       // ✅ ENABLED: Standard token refresh
     flowType: 'pkce',
-    // Add timeout for auth operations
     debug: import.meta.env.DEV
   },
   realtime: {
-    enabled: false  // Disable to prevent WebSocket errors
+    enabled: false  // Keep disabled to prevent WebSocket errors
   },
   global: {
     headers: {

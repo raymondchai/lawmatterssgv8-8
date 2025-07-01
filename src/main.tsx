@@ -4,6 +4,31 @@ import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
 
+// Network request interceptor - catches session-manager calls
+console.log("🌐 Setting up network interceptor...");
+
+const originalFetch = window.fetch;
+window.fetch = function(...args) {
+  const url = args[0];
+
+  // Log all fetch calls for debugging
+  console.log("🌐 Fetch call:", url);
+
+  // Block session-manager calls and show caller
+  if (typeof url === 'string' && url.includes('session-manager')) {
+    console.error("🚨 BLOCKED: Attempted call to session-manager endpoint!");
+    console.trace("📍 NETWORK CALL STACK:");
+    console.log("🌐 Blocked URL:", url);
+    console.log("🔧 Arguments:", args);
+
+    throw new Error("❌ session-manager endpoint blocked - Check console trace above!");
+  }
+
+  return originalFetch.apply(this, args);
+};
+
+console.log("✅ Network interceptor active");
+
 // CRITICAL FIX: Ensure React is available globally for production builds
 if (typeof window !== 'undefined') {
   (window as any).React = ReactNamespace;

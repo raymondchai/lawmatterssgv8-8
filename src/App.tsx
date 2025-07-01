@@ -181,7 +181,16 @@ const App = () => {
               <Route path={ROUTES.home} element={<Index />} />
               <Route path="/law-firms" element={<LawFirms />} />
               <Route path="/law-firms/:id" element={<LawFirmProfile />} />
-              {/* Removed conflicting /documents route - use /dashboard/documents instead */}
+              {/* Add /documents route that redirects to dashboard/documents */}
+              <Route path="/documents" element={
+                <AuthenticatedRoute>
+                  <Suspense fallback={<div className="flex items-center justify-center h-screen">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  </div>}>
+                    <LazyDashboardDocuments />
+                  </Suspense>
+                </AuthenticatedRoute>
+              } />
               <Route path="/legal-qa" element={<LegalQA />} />
               <Route path="/legal-qa/:id" element={<QuestionDetail />} />
               <Route path={ROUTES.pricing} element={<Pricing />} />

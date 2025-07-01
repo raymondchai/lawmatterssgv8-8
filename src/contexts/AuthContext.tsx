@@ -1,9 +1,11 @@
 import React, { createContext, useContext, useEffect, useState, useMemo, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
-import { sessionManager, type SessionUser } from '@/lib/services/sessionManager';
 import { authConfig } from '@/lib/auth/config';
 import { profilesApi } from '@/lib/api/profiles';
+import { supabase } from '@/lib/supabase';
 // Removed analytics imports to simplify sign-out process
+// STEP 1: Temporarily disable SessionManager to simplify authentication
+// import { sessionManager } from '@/lib/services/sessionManager';
 import type { User as ProfileUser } from '@/types';
 
 interface AuthContextType {
@@ -157,8 +159,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           console.log('🔧 AUTH INIT: Force sign out requested - clearing all data...');
 
           try {
+            // STEP 1: Temporarily disable SessionManager calls
             // Clear session manager memory state
-            sessionManager.clearMemoryState();
+            // sessionManager.clearMemoryState();
 
             // Clear any remaining client-side storage
             const authKeys = [
@@ -175,8 +178,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               }
             });
 
+            // STEP 1: Temporarily disable SessionManager calls
             // Force sign out from session manager (clears server-side session)
-            await sessionManager.signOut();
+            // await sessionManager.signOut();
 
             console.log('✅ Force sign out completed');
 
@@ -211,51 +215,36 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           }
         }, 5000);
 
-        // Validate current session with server
-        console.log('🔧 AUTH INIT: Validating server-side session...');
+        // Use standard Supabase session validation
+        console.log('🔧 AUTH INIT: Getting current Supabase session...');
 
         try {
-          const sessionData = await sessionManager.validateSession();
+          const { data: { session }, error } = await supabase.auth.getSession();
 
           if (!mounted) return;
 
-          if (sessionData) {
-            console.log('🔧 AUTH INIT: Valid session found for user:', sessionData.user.email);
-
-            // Convert SessionUser to Supabase User format for compatibility
-            const supabaseUser: User = {
-              id: sessionData.user.id,
-              email: sessionData.user.email,
-              aud: 'authenticated',
-              role: 'authenticated',
-              email_confirmed_at: new Date().toISOString(),
-              phone_confirmed_at: null,
-              confirmed_at: new Date().toISOString(),
-              last_sign_in_at: new Date().toISOString(),
-              app_metadata: {},
-              user_metadata: {},
-              identities: [],
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            };
-
-            // Create a minimal session object for compatibility
-            const session: Session = {
-              access_token: 'server-managed',
-              refresh_token: 'server-managed',
-              expires_in: 86400,
-              expires_at: Math.floor(Date.now() / 1000) + 86400,
-              token_type: 'bearer',
-              user: supabaseUser
-            };
+          if (error) {
+            console.error('🔧 AUTH INIT: Session error:', error);
+            setSession(null);
+            setUser(null);
+            safeSetProfile(null);
+          } else if (session && session.user) {
+            console.log('🔧 AUTH INIT: Valid session found for user:', session.user.email);
 
             setSession(session);
-            setUser(supabaseUser);
+            setUser(session.user);
 
-            if (sessionData.profile) {
-              console.log('🔧 AUTH INIT: Profile loaded:', sessionData.profile.role);
-              safeSetProfile(sessionData.profile);
-            } else {
+            // Load user profile from database
+            try {
+              const profileData = await profilesApi.getCurrentProfile();
+              if (profileData && mounted) {
+                console.log('🔧 AUTH INIT: Profile loaded:', profileData.role);
+                safeSetProfile(profileData);
+              } else {
+                safeSetProfile(null);
+              }
+            } catch (profileError) {
+              console.error('🔧 AUTH INIT: Profile load failed:', profileError);
               safeSetProfile(null);
             }
           } else {
@@ -448,46 +437,38 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signIn = async (email: string, password: string) => {
     try {
-      console.log('🔐 Starting server-controlled sign-in...');
+      console.log('🔐 Starting standard Supabase sign-in...');
 
-      const { user, profile } = await sessionManager.signIn(email, password);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
 
-      // Convert SessionUser to Supabase User format for compatibility
-      const supabaseUser: User = {
-        id: user.id,
-        email: user.email,
-        aud: 'authenticated',
-        role: 'authenticated',
-        email_confirmed_at: new Date().toISOString(),
-        phone_confirmed_at: null,
-        confirmed_at: new Date().toISOString(),
-        last_sign_in_at: new Date().toISOString(),
-        app_metadata: {},
-        user_metadata: {},
-        identities: [],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
+      if (error) {
+        console.error('❌ Sign-in failed:', error);
+        throw error;
+      }
 
-      // Create a minimal session object for compatibility
-      const session: Session = {
-        access_token: 'server-managed',
-        refresh_token: 'server-managed',
-        expires_in: 86400,
-        expires_at: Math.floor(Date.now() / 1000) + 86400,
-        token_type: 'bearer',
-        user: supabaseUser
-      };
+      if (data.session && data.user) {
+        console.log('✅ Sign-in successful for:', data.user.email);
 
-      // Update state
-      setSession(session);
-      setUser(supabaseUser);
-      safeSetProfile(profile);
+        setSession(data.session);
+        setUser(data.user);
 
-      console.log('✅ Server-controlled sign-in successful:', user.email);
+        // Load user profile
+        try {
+          const profileData = await profilesApi.getCurrentProfile();
+          safeSetProfile(profileData);
+          console.log('✅ Profile loaded:', profileData?.role);
+        } catch (profileError) {
+          console.error('⚠️ Profile load failed:', profileError);
+          safeSetProfile(null);
+        }
+      }
+
       return {};
     } catch (error) {
-      console.error('❌ Server-controlled sign-in failed:', error);
+      console.error('❌ Sign-in failed:', error);
       throw error;
     }
   };
@@ -560,13 +541,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       persistProfile(null);
       console.log('✅ Profile cache cleared');
 
-      // STEP 5: Sign out from session manager (clears server-side session and HTTP-only cookie)
-      console.log('🔧 Attempting server-controlled sign out...');
+      // STEP 5: Sign out from Supabase
+      console.log('🔧 Attempting Supabase sign out...');
       try {
-        await sessionManager.signOut();
-        console.log('✅ Server-controlled sign out completed');
+        await supabase.auth.signOut();
+        console.log('✅ Supabase sign out completed');
       } catch (e) {
-        console.warn('⚠️ Server sign out failed (local state already cleared):', e);
+        console.warn('⚠️ Supabase sign out failed (local state already cleared):', e);
       }
 
       // STEP 6: Force immediate redirect (don't wait for anything else)
@@ -587,8 +568,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setProfile(null);
       setRequiresTwoFactor(false);
 
+      // STEP 1: Temporarily disable SessionManager calls
       // Clear session manager memory state
-      sessionManager.clearMemoryState();
+      // sessionManager.clearMemoryState();
 
       // Reset the flag before redirect
       isSigningOutRef.current = false;
